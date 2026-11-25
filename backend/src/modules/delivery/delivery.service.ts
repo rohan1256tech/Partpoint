@@ -2,6 +2,7 @@ import { and, desc, eq, gte, isNull, sql, sum } from 'drizzle-orm';
 import type { Database } from '../../db/index.js';
 import { deliveryEarnings, deliveryProfiles, orderEvents, orders, users } from '../../db/schema.js';
 import { audit } from '../../lib/audit.js';
+import { istBoundaries } from '../../lib/time.js';
 import { AppError, badRequest, conflict, notFound, tooManyRequests } from '../../lib/errors.js';
 import { checkDeliveryOtp, DELIVERY_OTP_MAX_ATTEMPTS } from '../orders/delivery-otp.js';
 import type { OrderStatus } from '../orders/orders.service.js';
@@ -28,15 +29,6 @@ export interface EarningsSummary {
   unpaidPaise: number;
   deliveredCount: number;
   recent: { orderId: string; orderNumber: string; amountPaise: number; deliveredAt: string; paidOut: boolean }[];
-}
-
-/** Start of today and of this month in India Standard Time, as UTC instants. */
-function istBoundaries(now = new Date()) {
-  const IST = 330 * 60_000;
-  const local = new Date(now.getTime() + IST);
-  const day = Date.UTC(local.getUTCFullYear(), local.getUTCMonth(), local.getUTCDate()) - IST;
-  const month = Date.UTC(local.getUTCFullYear(), local.getUTCMonth(), 1) - IST;
-  return { today: new Date(day), week: new Date(day - 6 * 86_400_000), month: new Date(month) };
 }
 
 export class DeliveryService {

@@ -11,6 +11,10 @@ import { createStorage, type Storage } from './lib/storage.js';
 import { adminDeliveryRoutes, deliveryRoutes, pushTokenRoutes } from './modules/delivery/delivery.routes.js';
 import { DeliveryService } from './modules/delivery/delivery.service.js';
 import { NotificationService } from './modules/notifications/notifications.service.js';
+import { adminFinanceRoutes, FinanceService, wholesalerFinanceRoutes } from './modules/finance/finance.js';
+import { adminMarketingRoutes, bannerRoutes, MarketingService } from './modules/marketing/marketing.js';
+import { adminReportRoutes, ReportsService, wholesalerReportRoutes } from './modules/reports/reports.js';
+import { adminReviewRoutes, reviewRoutes, ReviewsService } from './modules/reviews/reviews.js';
 import { adminCatalogRoutes, catalogRoutes, wholesalerProductRoutes } from './modules/catalog/catalog.routes.js';
 import { ProductsService } from './modules/catalog/products.service.js';
 import { TaxonomyService } from './modules/catalog/taxonomy.service.js';
@@ -163,6 +167,22 @@ export async function buildApp({ env, db, checks, messaging, storage, push }: Ap
   await app.register(deliveryRoutes, { prefix: '/v1/delivery', ...fleet });
   await app.register(adminDeliveryRoutes, { prefix: '/v1/admin', ...fleet });
   await app.register(pushTokenRoutes, { prefix: '/v1/me', ...fleet });
+
+  const marketing = { marketing: new MarketingService(db, images), authenticate };
+  await app.register(bannerRoutes, { prefix: '/v1', ...marketing });
+  await app.register(adminMarketingRoutes, { prefix: '/v1/admin', ...marketing });
+
+  const moderation = { reviews: new ReviewsService(db, catalog.products), authenticate };
+  await app.register(reviewRoutes, { prefix: '/v1', ...moderation });
+  await app.register(adminReviewRoutes, { prefix: '/v1/admin/reviews', ...moderation });
+
+  const money = { finance: new FinanceService(db), authenticate };
+  await app.register(adminFinanceRoutes, { prefix: '/v1/admin/finance', ...money });
+  await app.register(wholesalerFinanceRoutes, { prefix: '/v1/wholesaler/finance', ...money });
+
+  const reporting = { reports: new ReportsService(db), authenticate };
+  await app.register(adminReportRoutes, { prefix: '/v1/admin', ...reporting });
+  await app.register(wholesalerReportRoutes, { prefix: '/v1/wholesaler/reports', ...reporting });
 
   return app;
 }

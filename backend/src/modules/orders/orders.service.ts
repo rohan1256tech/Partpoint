@@ -15,6 +15,7 @@ import {
   wholesalerProfiles,
 } from '../../db/schema.js';
 import { audit } from '../../lib/audit.js';
+import { istDate } from '../../lib/time.js';
 import { decodeCursor, paginate } from '../../lib/cursor.js';
 import { isUniqueViolation } from '../../lib/db-errors.js';
 import { AppError, badRequest, conflict, notFound } from '../../lib/errors.js';
@@ -106,11 +107,6 @@ const TRANSITIONS = {
   cancelByAdmin: { by: ['admin'], from: ['placed', 'accepted', 'packed', 'assigned'], to: 'cancelled' },
 } as const satisfies Record<string, { by: readonly OrderViewer[]; from: readonly OrderStatus[]; to: OrderStatus }>;
 export type OrderAction = keyof typeof TRANSITIONS;
-
-/** India Standard Time date for order numbers, e.g. 20261126. */
-function istDate(now = new Date()): string {
-  return new Date(now.getTime() + 330 * 60_000).toISOString().slice(0, 10).replace(/-/g, '');
-}
 
 export class OrdersService {
   constructor(
@@ -208,7 +204,7 @@ export class OrdersService {
           const [order] = await tx
             .insert(orders)
             .values({
-              orderNumber: `PP-${istDate()}-${String(seq?.n).padStart(6, '0')}`,
+              orderNumber: `PP-${istDate(new Date()).replace(/-/g, '')}-${String(seq?.n).padStart(6, '0')}`,
               checkoutId: id,
               retailerId,
               wholesalerId: g.wholesaler.id,

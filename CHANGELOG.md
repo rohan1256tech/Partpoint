@@ -68,6 +68,18 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   account approval, new order, accepted, packed, assigned, reassigned, picked up, out for delivery, delivered
   and cancelled. Sent after the response; dead tokens are removed. Pushes carry only the order number.
 - Migration `0007_delivery`.
+- Marketing (`/v1/admin/coupons`, `/v1/admin/banners`, `/v1/banners`): coupon management (codes fixed once
+  created, use counts, rule validation) and banners with date windows, ordering and links; live banners cached.
+- Reviews (`PUT /v1/orders/:id/reviews/:productId`, `/v1/products/:id/reviews`, `/v1/reviews/:id/report`):
+  retailers review products from their delivered orders (editable); reviewer shown by first name only;
+  any business user can report a review once. Admin queue of reported reviews; hide, unhide or dismiss
+  reports (audited). Product ratings count visible reviews only.
+- Finance (`/v1/admin/finance`, `/v1/wholesaler/finance`): wholesaler balance = goods value of delivered
+  orders − commission − payouts; admin records payouts with bank reference, never above the balance (even
+  under concurrent requests); delivery partner earnings settled in one step. All audited.
+- Reports: admin dashboard (approvals, orders, GMV, commission, 30-day series, top wholesalers and products,
+  open reports, unpaid earnings; cached 60 s); orders CSV export by IST date range; wholesaler sales report
+  (JSON or CSV). CSV files open correctly in Excel (UTF-8 BOM) and neutralise formula injection.
 
 ### Fixed
 - Blank values in `.env` (e.g. `DEMO_OTP=`) stopped the API from starting; they now mean "not set".
