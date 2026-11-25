@@ -79,5 +79,3 @@ export const emailOnlyBody = z.object({ email: emailSchema });
 export const emailVerifyBody = z.object({ email: emailSchema, code: otpCodeSchema, ...deviceContext });
 export const emailLoginBody = z.object({ email: emailSchema, password: z.string().min(1).max(128), ...deviceContext });
 export const passwordResetBody = z.object({ email: emailSchema, code: otpCodeSchema, newPassword: passwordSchema });
-export const refreshBody = z.object({ refreshToken: z.string().min(1).max(512), deviceId: deviceIdSchema });
-export const logoutBody = z.object({ refreshToken: z.string().min(1).max(512) });
