@@ -92,6 +92,13 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   Secrets are AES-256-GCM encrypted at rest; codes cannot be replayed; ±30 s clock drift allowed. No disable
   endpoint: `ADMIN_RESET_2FA=1 pnpm db:seed:admin` resets a lost authenticator and ends that admin's sessions.
 - Migration `0009_admin_totp`.
+- GST invoices (`GET .../orders/:id/invoice.pdf` for retailer, wholesaler and admin): issued when the order is
+  packed, numbered `PP<FY>-<serial>` in a consecutive series per wholesaler and Indian financial year; seller
+  and buyer details frozen at that moment. GST-inclusive prices are split into taxable value and CGST + SGST
+  (same state) or IGST (different states); a seller without GSTIN gets a bill of supply. The coupon discount
+  is spread over lines and every figure adds up to the paisa. Rendered on request with PDFKit; the delivery
+  fee is noted as charged by Partpoint separately.
+- Migration `0010_invoices`.
 
 ### Fixed
 - Blank values in `.env` (e.g. `DEMO_OTP=`) stopped the API from starting; they now mean "not set".
