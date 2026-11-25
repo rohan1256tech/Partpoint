@@ -6,6 +6,10 @@ import type { Env } from './config/env.js';
 import type { Database } from './db/index.js';
 import { AppError } from './lib/errors.js';
 import { createMessaging, type Messaging } from './lib/messaging.js';
+import { createStorage, type Storage } from './lib/storage.js';
+import { adminCatalogRoutes, catalogRoutes, wholesalerProductRoutes } from './modules/catalog/catalog.routes.js';
+import { ProductsService } from './modules/catalog/products.service.js';
+import { TaxonomyService } from './modules/catalog/taxonomy.service.js';
 import { authRoutes } from './modules/auth/auth.routes.js';
 import { AuthService } from './modules/auth/auth.service.js';
 import { OtpService } from './modules/auth/otp.service.js';
@@ -22,9 +26,11 @@ export interface AppDeps {
   checks: HealthChecks;
   /** Overrides the SMS/email senders (tests). */
   messaging?: Messaging;
+  /** Overrides image storage (tests). */
+  storage?: Storage;
 }
 
-export async function buildApp({ env, db, checks, messaging }: AppDeps): Promise<FastifyInstance> {
+export async function buildApp({ env, db, checks, messaging, storage }: AppDeps): Promise<FastifyInstance> {
   const app = Fastify({
     logger: {
       level: env.NODE_ENV === 'test' ? 'silent' : env.LOG_LEVEL,
@@ -60,10 +66,12 @@ export async function buildApp({ env, db, checks, messaging }: AppDeps): Promise
   app.setErrorHandler((error: FastifyError | AppError, request, reply) => {
     const status = error.statusCode ?? 500;
     if (status >= 500) request.log.error(error);
-    // Do not leak internal error details to clients.
+    // AppErrors are written for clients (including deliberate 503s). Anything else may carry
+    // internal details, so unexpected server errors are reduced to a generic message.
+    const expose = error instanceof AppError || status < 500;
     void reply.status(status).send({
-      error: status >= 500 ? 'Internal Server Error' : error.message,
-      code: status >= 500 ? 'INTERNAL' : (error.code ?? 'ERROR'),
+      error: expose ? error.message : 'Internal Server Error',
+      code: expose ? (error.code ?? 'ERROR') : 'INTERNAL',
       statusCode: status,
       ...(error instanceof AppError && error.details !== undefined ? { details: error.details } : {}),
     });
@@ -88,11 +96,21 @@ export async function buildApp({ env, db, checks, messaging }: AppDeps): Promise
   );
   const users = new UsersService(db, sessions);
   const authenticate = createAuthGuard(db, signer);
+  const images = storage ?? createStorage(env);
+  const catalog = {
+    products: new ProductsService(db, images),
+    taxonomy: new TaxonomyService(db, images),
+    storage: images,
+    authenticate,
+  };
 
   await app.register(healthRoutes, { checks });
   await app.register(authRoutes, { prefix: '/v1/auth', auth });
   await app.register(meRoutes, { prefix: '/v1', users, authenticate });
   await app.register(adminUserRoutes, { prefix: '/v1/admin/users', users, authenticate });
+  await app.register(catalogRoutes, { prefix: '/v1', ...catalog });
+  await app.register(wholesalerProductRoutes, { prefix: '/v1/wholesaler/products', ...catalog });
+  await app.register(adminCatalogRoutes, { prefix: '/v1/admin', ...catalog });
 
   return app;
 }

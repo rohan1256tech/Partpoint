@@ -335,7 +335,7 @@ These are stored in **GitHub Actions Secrets** and in local `.env` files. They a
 | Deploy | `VPS_HOST`, `VPS_USER`, `VPS_SSH_KEY` |
 | Data / auth | `DATABASE_URL`, `JWT_SECRET`, `REFRESH_TOKEN_SECRET`, `OTP_SECRET` (each ≥ 32 chars and different) |
 | Play review | `DEMO_PHONES` (comma-separated), `DEMO_OTP` (fixed 6-digit code; these numbers are never sent an SMS) |
-| Storage | `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET_NAME` |
+| Storage | `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET_NAME`, `R2_PUBLIC_URL` (CDN base for images) |
 | Payments | `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET`, `RAZORPAY_WEBHOOK_SECRET` |
 | Messaging | `SMS_API_KEY`, `MAIL_API_KEY`, `MAIL_FROM`, `FIREBASE_SERVICE_ACCOUNT` |
 | Android signing | Upload keystore (base64), `KEYSTORE_PASSWORD`, `KEY_ALIAS`, `KEY_PASSWORD`, `PLAY_SERVICE_ACCOUNT_JSON` |

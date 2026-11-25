@@ -42,6 +42,14 @@ const EnvSchema = z
     SMS_API_KEY: z.string().optional(),
     MAIL_API_KEY: z.string().optional(),
     MAIL_FROM: z.string().optional(),
+
+    // Cloudflare R2 (images). Optional in development: upload URLs then return 503.
+    R2_ACCOUNT_ID: z.string().optional(),
+    R2_ACCESS_KEY_ID: z.string().optional(),
+    R2_SECRET_ACCESS_KEY: z.string().optional(),
+    R2_BUCKET_NAME: z.string().optional(),
+    /** Public CDN base for images, e.g. https://img.example.in */
+    R2_PUBLIC_URL: z.url().optional(),
   })
   .superRefine((env, ctx) => {
     if (env.DEMO_PHONES.length > 0 && !env.DEMO_OTP) {
@@ -57,7 +65,16 @@ const EnvSchema = z
           ctx.addIssue({ code: 'custom', path: [key], message: 'placeholder secret used in production' });
         }
       }
-      for (const key of ['SMS_API_KEY', 'MAIL_API_KEY', 'MAIL_FROM'] as const) {
+      for (const key of [
+        'SMS_API_KEY',
+        'MAIL_API_KEY',
+        'MAIL_FROM',
+        'R2_ACCOUNT_ID',
+        'R2_ACCESS_KEY_ID',
+        'R2_SECRET_ACCESS_KEY',
+        'R2_BUCKET_NAME',
+        'R2_PUBLIC_URL',
+      ] as const) {
         if (!env[key]) ctx.addIssue({ code: 'custom', path: [key], message: 'required in production' });
       }
     }

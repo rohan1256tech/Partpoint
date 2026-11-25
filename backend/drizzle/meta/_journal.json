@@ -15,6 +15,27 @@
       "when": 1795632882648,
       "tag": "0001_user_consent",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1795633859294,
+      "tag": "0002_pg_trgm",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1795633871258,
+      "tag": "0003_catalog_search",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1795633957612,
+      "tag": "0004_product_status_reason",
+      "breakpoints": true
     }
   ]
 }

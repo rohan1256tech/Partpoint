@@ -4,6 +4,7 @@ import type { z } from 'zod';
 import type { Database } from '../../db/index.js';
 import { deliveryProfiles, retailerProfiles, users, wholesalerProfiles } from '../../db/schema.js';
 import { audit } from '../../lib/audit.js';
+import { isUniqueViolation } from '../../lib/db-errors.js';
 import { AppError, conflict, forbidden, unauthorized } from '../../lib/errors.js';
 import type { Messaging } from '../../lib/messaging.js';
 import { burnPasswordCheck, hashPassword, verifyPassword } from '../../lib/password.js';
@@ -54,13 +55,6 @@ export interface RequestMeta {
 export type OtpLoginResult =
   | { status: 'authenticated'; user: PublicUser; tokens: TokenPair }
   | { status: 'registration_required'; registrationToken: string };
-
-function isUniqueViolation(err: unknown): boolean {
-  for (let e: unknown = err; e; e = (e as { cause?: unknown }).cause) {
-    if ((e as { code?: unknown }).code === '23505') return true;
-  }
-  return false;
-}
 
 function assertRoleAllowedInApp(role: Role, app: ClientApp): void {
   if (!APP_ROLES[app].includes(role)) {

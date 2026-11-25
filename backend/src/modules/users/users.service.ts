@@ -2,7 +2,8 @@ import { and, desc, eq, isNull, lt, or, type SQL } from 'drizzle-orm';
 import type { Database } from '../../db/index.js';
 import { deliveryProfiles, retailerProfiles, users, wholesalerProfiles } from '../../db/schema.js';
 import { audit } from '../../lib/audit.js';
-import { badRequest, conflict, notFound } from '../../lib/errors.js';
+import { decodeCursor, encodeCursor } from '../../lib/cursor.js';
+import { conflict, notFound } from '../../lib/errors.js';
 import { toPublicUser, type PublicUser } from '../auth/auth.service.js';
 import type { SessionService } from '../auth/session.service.js';
 import type { Role } from '../auth/tokens.js';
@@ -132,15 +133,3 @@ export class UsersService {
   }
 }
 
-function encodeCursor(createdAt: Date, id: string): string {
-  return Buffer.from(`${createdAt.toISOString()}|${id}`).toString('base64url');
-}
-
-function decodeCursor(cursor: string): { createdAt: Date; id: string } {
-  const [iso, id] = Buffer.from(cursor, 'base64url').toString().split('|');
-  const createdAt = new Date(iso ?? '');
-  if (!id || Number.isNaN(createdAt.getTime()) || !/^[0-9a-f-]{36}$/i.test(id)) {
-    throw badRequest('INVALID_CURSOR', 'Invalid cursor');
-  }
-  return { createdAt, id };
-}

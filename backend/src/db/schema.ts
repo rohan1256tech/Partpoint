@@ -9,6 +9,7 @@
  */
 import { sql } from 'drizzle-orm';
 import {
+  type AnyPgColumn,
   bigint,
   boolean,
   check,
@@ -226,7 +227,7 @@ export const categories = pgTable(
   'categories',
   {
     id: id(),
-    parentId: uuid(),
+    parentId: uuid().references((): AnyPgColumn => categories.id),
     name: text().notNull(),
     slug: text().notNull(),
     imageKey: text(),
@@ -269,6 +270,8 @@ export const products = pgTable(
     hsnCode: text(),
     gstRateBps: integer().notNull().default(1800),
     status: productStatus().notNull().default('draft'),
+    /** Why an admin blocked the product; shown to the wholesaler. */
+    statusReason: text(),
     ratingAvg: doublePrecision().notNull().default(0),
     ratingCount: integer().notNull().default(0),
     createdAt: createdAt(),
@@ -278,6 +281,10 @@ export const products = pgTable(
     index('products_wholesaler_idx').on(t.wholesalerId),
     index('products_category_status_idx').on(t.categoryId, t.status),
     index('products_brand_idx').on(t.brandId),
+    index('products_status_created_idx').on(t.status, t.createdAt.desc(), t.id.desc()),
+    // Requires the pg_trgm extension (migration 0002).
+    index('products_name_trgm_idx').using('gin', t.name.op('gin_trgm_ops')),
+    index('products_part_number_trgm_idx').using('gin', t.partNumber.op('gin_trgm_ops')),
   ],
 );
 
