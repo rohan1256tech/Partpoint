@@ -1,10 +1,13 @@
 name: backend
 
+# Every push / PR: typecheck, lint, tests, migration drift, and an image that is built AND booted.
+# Pushes to main/develop also publish the image to GHCR; main then deploys that exact image.
 on:
   push:
     paths: ['backend/**', '.github/workflows/backend.yml']
   pull_request:
     paths: ['backend/**', '.github/workflows/backend.yml']
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -16,6 +19,9 @@ concurrency:
 defaults:
   run:
     working-directory: backend
+
+env:
+  IMAGE_NAME: partpoint-api
 
 jobs:
   check:
@@ -40,6 +46,15 @@ jobs:
         with:
           node-version: 22
       - run: corepack enable
+      - name: Locate pnpm store
+        id: pnpm
+        run: echo "store=$(pnpm store path --silent)" >> "$GITHUB_OUTPUT"
+      - name: Cache pnpm store
+        uses: actions/cache@v4
+        with:
+          path: ${{ steps.pnpm.outputs.store }}
+          key: pnpm-${{ runner.os }}-${{ hashFiles('backend/pnpm-lock.yaml') }}
+          restore-keys: pnpm-${{ runner.os }}-
       - run: pnpm install --frozen-lockfile
       - run: pnpm typecheck
       - run: pnpm lint
@@ -52,36 +67,156 @@ jobs:
             git status --porcelain drizzle
             exit 1
           fi
-      - name: Docker image builds
-        run: docker build -t partpoint-api:ci .
+
+  image:
+    needs: check
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      packages: write
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: partpoint
+          POSTGRES_PASSWORD: ci-only
+          POSTGRES_DB: partpoint
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U partpoint"
+          --health-interval 5s --health-timeout 3s --health-retries 10
+    outputs:
+      image: ${{ steps.ref.outputs.image }}
+    env:
+      # Publish only from long-lived branches; feature branches and PRs build and boot-test only.
+      PUBLISH: ${{ github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop') }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Image tags
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository_owner }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=sha,format=short,prefix=sha-
+            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
+            type=raw,value=develop,enable=${{ github.ref == 'refs/heads/develop' }}
+            type=ref,event=pr
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Build
+        uses: docker/build-push-action@v6
+        with:
+          context: backend
+          load: true
+          tags: ${{ env.IMAGE_NAME }}:ci
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha,scope=backend
+          cache-to: type=gha,scope=backend,mode=max
+
+      - name: Boot test (migrate, start, /health)
+        env:
+          # Throwaway values for this test only. development mode: no SMS/mail/R2/FCM keys needed.
+          NODE_ENV: development
+          PORT: '3000'
+          LOG_LEVEL: warn
+          DATABASE_URL: postgres://partpoint:ci-only@localhost:5432/partpoint
+          JWT_SECRET: ci-jwt-secret-0000000000000000000000000000
+          REFRESH_TOKEN_SECRET: ci-refresh-secret-00000000000000000000000
+          OTP_SECRET: ci-otp-secret-0000000000000000000000000000
+        run: |
+          pass=(-e NODE_ENV -e PORT -e LOG_LEVEL -e DATABASE_URL -e JWT_SECRET -e REFRESH_TOKEN_SECRET -e OTP_SECRET)
+          docker run --rm --network host "${pass[@]}" "$IMAGE_NAME:ci" node dist/db/migrate.js
+          docker run -d --name api --network host "${pass[@]}" "$IMAGE_NAME:ci"
+
+          for i in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:3000/health; then echo; exit 0; fi
+            sleep 1
+          done
+          echo "::error::The image did not become healthy"
+          docker logs api
+          exit 1
+
+      - name: Log in to GHCR
+        if: env.PUBLISH == 'true'
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Push (reuses the build cache, so no rebuild)
+        if: env.PUBLISH == 'true'
+        uses: docker/build-push-action@v6
+        with:
+          context: backend
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha,scope=backend
+
+      - name: Image reference for deploy
+        id: ref
+        if: env.PUBLISH == 'true'
+        # GHCR names must be lower-case.
+        run: |
+          owner="$(echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')"
+          echo "image=ghcr.io/${owner}/${IMAGE_NAME}:sha-${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
 
   deploy:
-    needs: check
+    needs: image
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     environment: production
+    permissions:
+      contents: read
+      packages: read
     concurrency:
       group: deploy-production
       cancel-in-progress: false
     steps:
-      - name: Deploy to VPS (only the api container restarts)
+      - name: Deploy the CI-built image (only the api container restarts)
         uses: appleboy/ssh-action@v1.2.0
+        env:
+          API_IMAGE: ${{ needs.image.outputs.image }}
+          GHCR_USER: ${{ github.actor }}
+          # Short-lived job token, valid only while this job runs.
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
+          envs: API_IMAGE,GHCR_USER,GHCR_TOKEN
           script_stop: true
           script: |
+            set -eu
             cd ~/partpoint/backend
+            # Compose file and Caddyfile come from the repo; the image comes from GHCR.
             git fetch --depth 1 origin main
             git reset --hard origin/main
-            docker compose -f docker-compose.yml build api
-            docker compose -f docker-compose.yml run --rm api node dist/db/migrate.js
-            docker compose -f docker-compose.yml up -d --no-deps api
+
+            echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USER" --password-stdin
+            trap 'docker logout ghcr.io >/dev/null' EXIT
+            docker pull "$API_IMAGE"
+
+            # Pin the image in .env so manual `docker compose` commands use the same one.
+            sed -i '/^API_IMAGE=/d' .env
+            echo "API_IMAGE=$API_IMAGE" >> .env
+
+            docker compose -f docker-compose.yml run --rm --no-deps api node dist/db/migrate.js
+            docker compose -f docker-compose.yml up -d --no-deps --no-build api
+
             for i in $(seq 1 30); do
-              docker compose -f docker-compose.yml exec -T api wget -qO- http://127.0.0.1:3000/health && exit 0
+              if docker compose -f docker-compose.yml exec -T api wget -qO- http://127.0.0.1:3000/health; then
+                docker image prune -f >/dev/null
+                exit 0
+              fi
               sleep 2
             done
-            echo "health check failed after deploy" >&2
+            echo "health check failed after deploy of $API_IMAGE" >&2
+            docker compose -f docker-compose.yml logs --tail 100 api >&2
             exit 1

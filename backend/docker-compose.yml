@@ -20,6 +20,9 @@ services:
     # No ports: Postgres is never exposed outside the Docker network.
 
   api:
+    # Production runs the image CI built and pushed (API_IMAGE=ghcr.io/<owner>/partpoint-api:sha-<commit>,
+    # written by the deploy job). Locally API_IMAGE is unset and `docker compose up --build` builds it here.
+    image: ${API_IMAGE:-partpoint-api:local}
     build: .
     restart: unless-stopped
     env_file: .env

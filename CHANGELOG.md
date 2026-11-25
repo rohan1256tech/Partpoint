@@ -99,6 +99,9 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   is spread over lines and every figure adds up to the paisa. Rendered on request with PDFKit; the delivery
   fee is noted as charged by Partpoint separately.
 - Migration `0010_invoices`.
+- CI builds the backend Docker image in GitHub Actions (layer cache in GitHub), boot-tests it (migrate an empty
+  database, start, `/health`), and on `main` / `develop` publishes it to GHCR. Deploys pull the exact
+  `sha-<commit>` image instead of building on the server; `API_IMAGE` pins it in the server's `.env`.
 
 ### Fixed
 - Blank values in `.env` (e.g. `DEMO_OTP=`) stopped the API from starting; they now mean "not set".

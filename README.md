@@ -354,8 +354,9 @@ These are stored in **GitHub Actions Secrets** and in local `.env` files. They a
 | `feature/<name>` | Branched from `develop` and merged back via PR |
 
 - **Every push:** backend typecheck, lint, and tests; admin build; Android unit tests. Path filters ensure only the affected part runs.
+- **Backend image:** built in GitHub Actions and boot-tested (migrations on an empty database, then `/health`) on every push and PR. Pushes to `main` and `develop` publish it to GHCR as `ghcr.io/<owner>/partpoint-api` with tags `sha-<commit>` plus `latest` / `develop`. The server never builds images.
 - **Merge to `main`:**
-  - Backend deploys to the VPS. Only the `api` container restarts.
+  - Backend deploys to the VPS: the server pulls the `sha-<commit>` image, runs migrations, and restarts only the `api` container, then checks `/health`. The image is pinned in the server's `.env` (`API_IMAGE`). To roll back, re-run the deploy job of an earlier commit.
   - The admin panel deploys.
   - Signed AABs for both apps are uploaded to the Play internal testing track.
 - Android `versionCode` is derived from the git commit count. CI checks out the full history (`fetch-depth: 0`) so the count is correct.
