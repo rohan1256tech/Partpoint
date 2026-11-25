@@ -87,6 +87,11 @@ export const users = pgTable(
     /** DPDP: when the user accepted the privacy policy, and which version. */
     consentAt: timestamp({ withTimezone: true }),
     consentVersion: text(),
+    /** Admin 2FA: TOTP secret, AES-GCM encrypted (lib/totp.ts SecretBox). */
+    totpSecret: text(),
+    totpEnabledAt: timestamp({ withTimezone: true }),
+    /** Last accepted TOTP time step; older or equal steps are refused (no replay). */
+    totpLastStep: bigint({ mode: 'number' }),
     approvedBy: uuid(),
     approvedAt: timestamp({ withTimezone: true }),
     deletedAt: timestamp({ withTimezone: true }),
@@ -182,6 +187,8 @@ export const sessions = pgTable(
     tokenHash: text().notNull(),
     expiresAt: timestamp({ withTimezone: true }).notNull(),
     revokedAt: timestamp({ withTimezone: true }),
+    /** When this session passed a second factor (admin TOTP). */
+    mfaAt: timestamp({ withTimezone: true }),
     lastUsedAt: timestamp({ withTimezone: true }),
     userAgent: text(),
     ip: text(),

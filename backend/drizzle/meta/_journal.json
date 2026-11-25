@@ -64,6 +64,13 @@
       "when": 1795637049251,
       "tag": "0008_account_deletion",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1795637193253,
+      "tag": "0009_admin_totp",
+      "breakpoints": true
     }
   ]
 }

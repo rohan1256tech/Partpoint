@@ -7,6 +7,7 @@ import type { Messaging } from '../src/lib/messaging.js';
 import { deliveryProfiles, users, wholesalerProfiles, retailerProfiles } from '../src/db/schema.js';
 import type { PushMessage, PushResult, PushSender } from '../src/lib/push.js';
 import { hashPassword } from '../src/lib/password.js';
+import { hotp, newTotpSecret, SecretBox, timeStep } from '../src/lib/totp.js';
 import type { PresignedUpload, Storage, StoredObject } from '../src/lib/storage.js';
 import { testDatabaseUrl } from './global-setup.js';
 
@@ -117,6 +118,9 @@ export async function createTestApp(
   };
 }
 
+/** Shared authenticator secret for test admins (each admin has its own replay counter). */
+export const ADMIN_TOTP_SECRET = newTotpSecret();
+
 let seq = 0;
 const PASSWORD = 'test-password-123';
 let passwordHash: Promise<string> | undefined;
@@ -141,6 +145,10 @@ export async function signIn(
       email,
       passwordHash: await passwordHash,
       emailVerifiedAt: new Date(),
+      // Admins sign in with a second factor; give test admins an authenticator.
+      ...(role === 'admin'
+        ? { totpSecret: new SecretBox(testEnv().OTP_SECRET).seal(ADMIN_TOTP_SECRET), totpEnabledAt: new Date() }
+        : {}),
     })
     .returning({ id: users.id });
   const id = (user as { id: string }).id;
@@ -167,6 +175,15 @@ export async function signIn(
     payload: { email, password: PASSWORD, app, deviceId: `device-${seq}-xxxx` },
   });
   if (res.statusCode !== 200) throw new Error(`signIn failed: ${res.statusCode} ${res.body}`);
+  if (role === 'admin') {
+    const mfa = await t.app.inject({
+      method: 'POST',
+      url: '/v1/auth/login/totp',
+      payload: { challengeToken: res.json().challengeToken, code: hotp(ADMIN_TOTP_SECRET, timeStep()), deviceId: `device-${seq}-xxxx` },
+    });
+    if (mfa.statusCode !== 200) throw new Error(`admin 2FA failed: ${mfa.statusCode} ${mfa.body}`);
+    return { id, token: mfa.json().tokens.accessToken };
+  }
   return { id, token: res.json().tokens.accessToken };
 }
 

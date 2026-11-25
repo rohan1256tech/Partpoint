@@ -1,8 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { eq } from 'drizzle-orm';
 import { auditLogs, otpCodes, users } from '../src/db/schema.js';
-import { hashPassword } from '../src/lib/password.js';
-import { createTestApp, DEMO_OTP, DEMO_PHONE, resetDb, type TestContext } from './helpers.js';
+import { createTestApp, DEMO_OTP, DEMO_PHONE, resetDb, signIn, type TestContext } from './helpers.js';
 
 let t: TestContext;
 
@@ -49,22 +48,7 @@ async function signUpRetailer(phone = '9876543210', d: { app: string; deviceId: 
 }
 
 async function createAdmin() {
-  await t.db.insert(users).values({
-    role: 'admin',
-    status: 'approved',
-    name: 'Ops',
-    email: 'ops@partpoint.test',
-    passwordHash: await hashPassword('correct-horse-battery'),
-    emailVerifiedAt: new Date(),
-  });
-  const res = await post('/v1/auth/login/email', {
-    email: 'ops@partpoint.test',
-    password: 'correct-horse-battery',
-    app: 'admin',
-    deviceId: 'admin-browser-1',
-  });
-  expect(res.statusCode).toBe(200);
-  return res.json().tokens.accessToken as string;
+  return (await signIn(t, 'admin')).token;
 }
 
 describe('phone OTP signup and login', () => {

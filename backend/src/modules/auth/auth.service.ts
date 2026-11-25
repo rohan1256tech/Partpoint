@@ -1,4 +1,4 @@
-import { and, eq, isNull } from 'drizzle-orm';
+import { and, eq, isNull, sql } from 'drizzle-orm';
 import type { FastifyBaseLogger } from 'fastify';
 import type { z } from 'zod';
 import type { Database } from '../../db/index.js';
@@ -8,6 +8,7 @@ import { isUniqueViolation } from '../../lib/db-errors.js';
 import { AppError, conflict, forbidden, unauthorized } from '../../lib/errors.js';
 import type { Messaging } from '../../lib/messaging.js';
 import { burnPasswordCheck, hashPassword, verifyPassword } from '../../lib/password.js';
+import { verifyTotp, type SecretBox } from '../../lib/totp.js';
 import type {
   emailLoginBody,
   emailVerifyBody,
@@ -71,6 +72,7 @@ export class AuthService {
     private readonly messaging: Messaging,
     private readonly consentVersion: string,
     private readonly log: FastifyBaseLogger,
+    private readonly secretBox: SecretBox,
   ) {}
 
   // ---------------------------------------------------------------- phone OTP
@@ -159,7 +161,7 @@ export class AuthService {
   async loginWithEmail(
     input: z.infer<typeof emailLoginBody>,
     meta: RequestMeta,
-  ): Promise<{ user: PublicUser; tokens: TokenPair }> {
+  ): Promise<{ user: PublicUser; tokens: TokenPair } | { status: 'totp_required'; challengeToken: string }> {
     const user = await this.findActiveBy('email', input.email);
     if (!user?.passwordHash) {
       await burnPasswordCheck(input.password);
@@ -170,7 +172,38 @@ export class AuthService {
     }
     if (!user.emailVerifiedAt) throw forbidden('EMAIL_NOT_VERIFIED', 'Verify your email address to continue');
     this.assertCanSignIn(user, input.app);
+    if (user.role === 'admin' && user.totpEnabledAt) {
+      // Second step: POST /v1/auth/login/totp with this challenge and a code from the authenticator app.
+      return { status: 'totp_required', challengeToken: await this.signer.signMfaChallenge(user.id) };
+    }
+    // An admin without 2FA gets a session that can only set 2FA up (enforced by the auth guard).
     const tokens = await this.sessions.create(user, ctx(input, meta));
+    return { user: toPublicUser(user), tokens };
+  }
+
+  async loginWithTotp(
+    input: { challengeToken: string; code: string; deviceId: string },
+    meta: RequestMeta,
+  ): Promise<{ user: PublicUser; tokens: TokenPair }> {
+    const { userId } = await this.signer.verifyMfaChallenge(input.challengeToken);
+    const [user] = await this.db
+      .select()
+      .from(users)
+      .where(and(eq(users.id, userId), isNull(users.deletedAt)));
+    if (!user?.totpSecret || !user.totpEnabledAt) throw unauthorized('INVALID_TOKEN', 'Invalid sign-in challenge');
+    this.assertCanSignIn(user, 'admin');
+
+    const step = verifyTotp(this.secretBox.open(user.totpSecret), input.code, user.totpLastStep);
+    if (step === null) throw unauthorized('TOTP_INVALID', 'Invalid authentication code');
+    // Record the step atomically: two requests with the same code cannot both succeed.
+    const claimed = await this.db
+      .update(users)
+      .set({ totpLastStep: step })
+      .where(and(eq(users.id, user.id), sql`(${users.totpLastStep} IS NULL OR ${users.totpLastStep} < ${step})`))
+      .returning({ id: users.id });
+    if (claimed.length === 0) throw unauthorized('TOTP_INVALID', 'Invalid authentication code');
+
+    const tokens = await this.sessions.create(user, ctx({ app: 'admin', deviceId: input.deviceId }, meta), { mfa: true });
     return { user: toPublicUser(user), tokens };
   }
 

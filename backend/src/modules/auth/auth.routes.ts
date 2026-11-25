@@ -1,6 +1,8 @@
 import type { FastifyPluginAsync, FastifyRequest } from 'fastify';
+import { z } from 'zod';
 import { parse } from '../../lib/validate.js';
 import {
+  deviceIdSchema,
   emailLoginBody,
   emailOnlyBody,
   emailVerifyBody,
@@ -57,6 +59,18 @@ export const authRoutes: FastifyPluginAsync<{ auth: AuthService }> = async (app,
 
   app.post('/login/email', limit(10, '15 minutes'), async (req) => {
     return auth.loginWithEmail(parse(emailLoginBody, req.body), meta(req));
+  });
+
+  app.post('/login/totp', limit(10, '10 minutes'), async (req) => {
+    const input = parse(
+      z.object({
+        challengeToken: z.string().min(1).max(2000),
+        code: z.string().regex(/^\d{6}$/, 'Enter the 6-digit code'),
+        deviceId: deviceIdSchema,
+      }),
+      req.body,
+    );
+    return auth.loginWithTotp(input, meta(req));
   });
 
   app.post('/password/forgot', limit(5, '1 hour'), async (req, reply) => {

@@ -43,7 +43,7 @@ export class SessionService {
     return new Date(Date.now() + this.refreshTtlDays * DAY_MS);
   }
 
-  async create(user: { id: string; role: Role }, ctx: SessionContext): Promise<TokenPair> {
+  async create(user: { id: string; role: Role }, ctx: SessionContext, opts: { mfa?: boolean } = {}): Promise<TokenPair> {
     const sessionId = crypto.randomUUID();
     const refreshToken = `${sessionId}.${randomToken()}`;
     await this.db.insert(sessions).values({
@@ -54,6 +54,7 @@ export class SessionService {
       tokenHash: this.hash(refreshToken),
       expiresAt: this.expiry(),
       lastUsedAt: new Date(),
+      mfaAt: opts.mfa ? new Date() : null,
       userAgent: ctx.userAgent ?? null,
       ip: ctx.ip ?? null,
     });
@@ -125,6 +126,10 @@ export class SessionService {
       .update(sessions)
       .set({ revokedAt: new Date() })
       .where(and(eq(sessions.tokenHash, this.hash(refreshToken)), isNull(sessions.revokedAt)));
+  }
+
+  async markMfa(sessionId: string): Promise<void> {
+    await this.db.update(sessions).set({ mfaAt: new Date() }).where(eq(sessions.id, sessionId));
   }
 
   async revoke(sessionId: string): Promise<void> {

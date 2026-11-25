@@ -86,6 +86,12 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   progress or money is unsettled. Public page `GET /account/delete` with a request form
   (`POST /v1/account-deletion-requests`, no account enumeration) and an admin queue to complete or reject.
 - Migration `0008_account_deletion`.
+- Admin two-factor authentication (TOTP, RFC 6238, verified against the RFC test vectors): admins without
+  2FA can only reach `/v1/admin/2fa` (setup with an `otpauth://` URI for a QR code, then enable with a first
+  code). Later sign-ins return a 5-minute challenge exchanged with a code at `POST /v1/auth/login/totp`.
+  Secrets are AES-256-GCM encrypted at rest; codes cannot be replayed; ±30 s clock drift allowed. No disable
+  endpoint: `ADMIN_RESET_2FA=1 pnpm db:seed:admin` resets a lost authenticator and ends that admin's sessions.
+- Migration `0009_admin_totp`.
 
 ### Fixed
 - Blank values in `.env` (e.g. `DEMO_OTP=`) stopped the API from starting; they now mean "not set".

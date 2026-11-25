@@ -14,6 +14,7 @@ export const APP_ROLES: Record<ClientApp, readonly Role[]> = {
 const ISSUER = 'partpoint';
 const ACCESS_AUD = 'partpoint-api';
 const REGISTRATION_AUD = 'partpoint-registration';
+const MFA_AUD = 'partpoint-mfa';
 
 export interface AccessClaims {
   sub: string;
@@ -71,6 +72,24 @@ export class TokenSigner {
     const payload = await this.verify(token, REGISTRATION_AUD, 'registration');
     if (typeof payload.phone !== 'string') throw unauthorized('INVALID_TOKEN', 'Invalid registration token');
     return { phone: payload.phone };
+  }
+
+  /** Proof that an admin passed the password step; exchanged with a TOTP code for a session. */
+  signMfaChallenge(userId: string): Promise<string> {
+    return new SignJWT({ typ: 'mfa' })
+      .setProtectedHeader({ alg: 'HS256' })
+      .setSubject(userId)
+      .setIssuer(ISSUER)
+      .setAudience(MFA_AUD)
+      .setIssuedAt()
+      .setExpirationTime('5m')
+      .sign(this.key);
+  }
+
+  async verifyMfaChallenge(token: string): Promise<{ userId: string }> {
+    const payload = await this.verify(token, MFA_AUD, 'mfa');
+    if (typeof payload.sub !== 'string') throw unauthorized('INVALID_TOKEN', 'Invalid sign-in challenge');
+    return { userId: payload.sub };
   }
 
   private async verify(token: string, audience: string, typ: string) {

@@ -31,6 +31,8 @@ import {
 import { OrdersService } from './modules/orders/orders.service.js';
 import { SettingsService } from './modules/settings/settings.service.js';
 import { WishlistService, wishlistRoutes } from './modules/wishlist/wishlist.js';
+import { SecretBox } from './lib/totp.js';
+import { AdminMfaService, adminMfaRoutes } from './modules/auth/admin-mfa.js';
 import { authRoutes } from './modules/auth/auth.routes.js';
 import { AuthService } from './modules/auth/auth.service.js';
 import { OtpService } from './modules/auth/otp.service.js';
@@ -108,6 +110,7 @@ export async function buildApp({ env, db, checks, messaging, storage, push }: Ap
     demoTargets: new Set(env.DEMO_PHONES),
     ...(env.DEMO_OTP ? { demoCode: env.DEMO_OTP } : {}),
   });
+  const secretBox = new SecretBox(env.OTP_SECRET);
   const auth = new AuthService(
     db,
     otp,
@@ -116,6 +119,7 @@ export async function buildApp({ env, db, checks, messaging, storage, push }: Ap
     messaging ?? createMessaging(env, app.log),
     env.CONSENT_VERSION,
     app.log,
+    secretBox,
   );
   const notifications = new NotificationService(db, push ?? createPushSender(env, app.log), app.log);
   app.decorate('notifications', notifications);
@@ -134,6 +138,11 @@ export async function buildApp({ env, db, checks, messaging, storage, push }: Ap
   await app.register(authRoutes, { prefix: '/v1/auth', auth });
   await app.register(meRoutes, { prefix: '/v1', users, authenticate });
   await app.register(adminUserRoutes, { prefix: '/v1/admin/users', users, authenticate });
+  await app.register(adminMfaRoutes, {
+    prefix: '/v1/admin/2fa',
+    mfa: new AdminMfaService(db, secretBox, sessions),
+    authenticate,
+  });
   await app.register(catalogRoutes, { prefix: '/v1', ...catalog });
   await app.register(wholesalerProductRoutes, { prefix: '/v1/wholesaler/products', ...catalog });
   await app.register(adminCatalogRoutes, { prefix: '/v1/admin', ...catalog });
