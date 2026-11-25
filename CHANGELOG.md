@@ -102,6 +102,12 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - CI builds the backend Docker image in GitHub Actions (layer cache in GitHub), boot-tests it (migrate an empty
   database, start, `/health`), and on `main` / `develop` publishes it to GHCR. Deploys pull the exact
   `sha-<commit>` image instead of building on the server; `API_IMAGE` pins it in the server's `.env`.
+- Admin refresh token is now an httpOnly, SameSite=Strict cookie scoped to `/v1/auth` (Secure in production);
+  mobile apps still receive it in the body.
+- Admin panel (`admin/`, React + Vite + Mantine + TanStack Query), first slice: sign-in with the 2FA step,
+  first-time 2FA setup with a locally drawn QR code, session restored from the cookie, dark/light theme,
+  dashboard (KPIs, accessible 30-day orders chart with table view, status counts, top sellers), and user
+  approvals (filter by status/role, details, approve/unblock, block with reason). CI: `admin.yml`.
 
 ### Fixed
 - Blank values in `.env` (e.g. `DEMO_OTP=`) stopped the API from starting; they now mean "not set".
