@@ -299,12 +299,22 @@ Partpoint/
 ### Backend
 ```bash
 cd backend
-cp .env.example .env
+cp .env.example .env           # if a local Postgres already uses 5432, set POSTGRES_HOST_PORT and DATABASE_URL to 5433
 pnpm install
 docker compose up -d
 pnpm db:migrate
 curl http://localhost/health   # → { "status": "ok", "postgres": "connected" }
+
+# First admin account (admins cannot self-register)
+ADMIN_EMAIL=you@example.in ADMIN_PASSWORD='at-least-12-chars' pnpm db:seed:admin
+
+pnpm test                      # integration tests use a separate <db>_test database, created automatically
 ```
+
+In development, no SMS or email is sent: OTP codes appear in the API log (`docker compose logs api`, look for `devCode`).
+
+Production uses only the base compose file, which never publishes the Postgres port:
+`docker compose -f docker-compose.yml up -d`.
 
 ### Admin panel
 ```bash
@@ -323,10 +333,11 @@ These are stored in **GitHub Actions Secrets** and in local `.env` files. They a
 | Group | Keys |
 |---|---|
 | Deploy | `VPS_HOST`, `VPS_USER`, `VPS_SSH_KEY` |
-| Data / auth | `DATABASE_URL`, `JWT_SECRET`, `REFRESH_TOKEN_SECRET` |
+| Data / auth | `DATABASE_URL`, `JWT_SECRET`, `REFRESH_TOKEN_SECRET`, `OTP_SECRET` (each ≥ 32 chars and different) |
+| Play review | `DEMO_PHONES` (comma-separated), `DEMO_OTP` (fixed 6-digit code; these numbers are never sent an SMS) |
 | Storage | `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET_NAME` |
 | Payments | `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET`, `RAZORPAY_WEBHOOK_SECRET` |
-| Messaging | `SMS_API_KEY`, `MAIL_API_KEY`, `FIREBASE_SERVICE_ACCOUNT` |
+| Messaging | `SMS_API_KEY`, `MAIL_API_KEY`, `MAIL_FROM`, `FIREBASE_SERVICE_ACCOUNT` |
 | Android signing | Upload keystore (base64), `KEYSTORE_PASSWORD`, `KEY_ALIAS`, `KEY_PASSWORD`, `PLAY_SERVICE_ACCOUNT_JSON` |
 
 > ⚠️ Keep a backup of the Android upload keystore in a password manager. With Play App Signing, a lost upload key can be reset, but only after a support process that takes several days.
