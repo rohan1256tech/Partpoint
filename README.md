@@ -105,6 +105,9 @@ RETAILER    Live status updates → Rate & review → Reorder
 BACKEND     Commission computed → wholesaler payable recorded → delivery earnings recorded
 ```
 
+> **Current build:** online payment is deferred (see [Open Decisions](#open-decisions)). "Checkout → Pay" is
+> currently "Place order": stock is taken and the orders are created immediately; payment is settled offline.
+
 ### 4. Money flow
 ```
 Retailer pays → Platform's Razorpay account → Platform commission retained
@@ -299,12 +302,22 @@ Partpoint/
 ### Backend
 ```bash
 cd backend
-cp .env.example .env
+cp .env.example .env           # if a local Postgres already uses 5432, set POSTGRES_HOST_PORT and DATABASE_URL to 5433
 pnpm install
 docker compose up -d
 pnpm db:migrate
 curl http://localhost/health   # → { "status": "ok", "postgres": "connected" }
+
+# First admin account (admins cannot self-register)
+ADMIN_EMAIL=you@example.in ADMIN_PASSWORD='at-least-12-chars' pnpm db:seed:admin
+
+pnpm test                      # integration tests use a separate <db>_test database, created automatically
 ```
+
+In development, no SMS or email is sent: OTP codes appear in the API log (`docker compose logs api`, look for `devCode`).
+
+Production uses only the base compose file, which never publishes the Postgres port:
+`docker compose -f docker-compose.yml up -d`.
 
 ### Admin panel
 ```bash
@@ -323,10 +336,11 @@ These are stored in **GitHub Actions Secrets** and in local `.env` files. They a
 | Group | Keys |
 |---|---|
 | Deploy | `VPS_HOST`, `VPS_USER`, `VPS_SSH_KEY` |
-| Data / auth | `DATABASE_URL`, `JWT_SECRET`, `REFRESH_TOKEN_SECRET` |
-| Storage | `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET_NAME` |
+| Data / auth | `DATABASE_URL`, `JWT_SECRET`, `REFRESH_TOKEN_SECRET`, `OTP_SECRET` (each ≥ 32 chars and different) |
+| Play review | `DEMO_PHONES` (comma-separated), `DEMO_OTP` (fixed 6-digit code; these numbers are never sent an SMS) |
+| Storage | `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET_NAME`, `R2_PUBLIC_URL` (CDN base for images) |
 | Payments | `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET`, `RAZORPAY_WEBHOOK_SECRET` |
-| Messaging | `SMS_API_KEY`, `MAIL_API_KEY`, `FIREBASE_SERVICE_ACCOUNT` |
+| Messaging | `SMS_API_KEY`, `MAIL_API_KEY`, `MAIL_FROM`, `FIREBASE_SERVICE_ACCOUNT` |
 | Android signing | Upload keystore (base64), `KEYSTORE_PASSWORD`, `KEY_ALIAS`, `KEY_PASSWORD`, `PLAY_SERVICE_ACCOUNT_JSON` |
 
 > ⚠️ Keep a backup of the Android upload keystore in a password manager. With Play App Signing, a lost upload key can be reset, but only after a support process that takes several days.
@@ -340,8 +354,9 @@ These are stored in **GitHub Actions Secrets** and in local `.env` files. They a
 | `feature/<name>` | Branched from `develop` and merged back via PR |
 
 - **Every push:** backend typecheck, lint, and tests; admin build; Android unit tests. Path filters ensure only the affected part runs.
+- **Backend image:** built in GitHub Actions and boot-tested (migrations on an empty database, then `/health`) on every push and PR. Pushes to `main` and `develop` publish it to GHCR as `ghcr.io/<owner>/partpoint-api` with tags `sha-<commit>` plus `latest` / `develop`. The server never builds images.
 - **Merge to `main`:**
-  - Backend deploys to the VPS. Only the `api` container restarts.
+  - Backend deploys to the VPS: the server pulls the `sha-<commit>` image, runs migrations, and restarts only the `api` container, then checks `/health`. The image is pinned in the server's `.env` (`API_IMAGE`). To roll back, re-run the deploy job of an earlier commit.
   - The admin panel deploys.
   - Signed AABs for both apps are uploaded to the Play internal testing track.
 - Android `versionCode` is derived from the git commit count. CI checks out the full history (`fetch-depth: 0`) so the count is correct.
@@ -398,6 +413,7 @@ These are estimates as of Nov 2026, at about ₹88 per US$1, and include 18% GST
 | Decision | Current assumption |
 |---|---|
 | Udhaar / RMA / geofence in v1? | No. Listed as Phase 2. |
+| Online payment (Razorpay) | **Deferred.** Orders are placed straight from the cart and payment is settled offline for now. The checkout record that groups a retailer's orders is kept so Razorpay can be added later without schema rework. |
 | Android language | Kotlin + Jetpack Compose |
 | Server | AWS Lightsail Mumbai (2 GB) |
 | SMS provider | Fast2SMS (confirm whether its OTP route needs DLT) |

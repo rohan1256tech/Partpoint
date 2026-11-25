@@ -1,0 +1,10 @@
+# Local development only. Exposes Postgres on the loopback interface so
+# `pnpm db:migrate` / `pnpm dev` on the host can reach it.
+# Production deploys use `docker compose -f docker-compose.yml`, which skips this file.
+services:
+  postgres:
+    ports:
+      - '127.0.0.1:${POSTGRES_HOST_PORT:-5432}:5432'
+  api:
+    environment:
+      NODE_ENV: development

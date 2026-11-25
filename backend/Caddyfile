@@ -1,0 +1,18 @@
+# SITE_ADDRESS: ":80" locally; the API hostname (e.g. api.example.in) in production.
+{$SITE_ADDRESS::80} {
+	encode zstd gzip
+
+	reverse_proxy api:3000 {
+		# Behind Cloudflare the real client IP arrives in CF-Connecting-IP. The firewall
+		# admits only Cloudflare ranges, so clients cannot spoof this header.
+		# Locally the header is absent and Fastify falls back to the socket address.
+		header_up X-Forwarded-For {http.request.header.CF-Connecting-IP}
+	}
+
+	header -Server
+
+	log {
+		output stdout
+		format json
+	}
+}
