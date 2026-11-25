@@ -32,3 +32,19 @@ coverage/
 .DS_Store
 Thumbs.db
 desktop.ini
+
+# Android
+.gradle/
+local.properties
+*.jks
+*.keystore
+google-services.json
+captures/
+.externalNativeBuild/
+.cxx/
+*.apk
+*.aab
+
+# Backups / dumps
+*.dump
+*.dump.zst
