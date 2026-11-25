@@ -24,6 +24,7 @@ import type { SettingsService } from '../settings/settings.service.js';
 import { loadVariantLines, type CartService } from './cart.service.js';
 import type { CouponsService } from './coupons.service.js';
 import type { listOrdersQuery, placeOrderBody } from './orders.schemas.js';
+import { assignInvoice } from '../invoices/invoices.js';
 import type { NotificationService } from '../notifications/notifications.service.js';
 import { deliveryOtp } from './delivery-otp.js';
 import { priceOrderGroups } from './pricing.js';
@@ -465,6 +466,8 @@ export class OrdersService {
         .set({ status: rule.to, ...(rule.to === 'cancelled' ? { cancelReason: note } : {}) })
         .where(eq(orders.id, orderId));
       await tx.insert(orderEvents).values({ orderId, status: rule.to, actorId: userId, note });
+      // Packed = ready to dispatch: the GST invoice is issued now.
+      if (rule.to === 'packed') await assignInvoice(tx, orderId);
 
       if (rule.to === 'cancelled') {
         // Goods never left the wholesaler, so the stock goes back on sale.

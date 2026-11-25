@@ -11,6 +11,12 @@ import { createStorage, type Storage } from './lib/storage.js';
 import { adminDeliveryRoutes, deliveryRoutes, pushTokenRoutes } from './modules/delivery/delivery.routes.js';
 import { DeliveryService } from './modules/delivery/delivery.service.js';
 import { NotificationService } from './modules/notifications/notifications.service.js';
+import {
+  adminInvoiceRoutes,
+  InvoicesService,
+  retailerInvoiceRoutes,
+  wholesalerInvoiceRoutes,
+} from './modules/invoices/invoices.js';
 import { AccountService, accountRoutes, adminAccountRoutes, publicAccountRoutes } from './modules/account/account.js';
 import { adminFinanceRoutes, FinanceService, wholesalerFinanceRoutes } from './modules/finance/finance.js';
 import { adminMarketingRoutes, bannerRoutes, MarketingService } from './modules/marketing/marketing.js';
@@ -195,6 +201,11 @@ export async function buildApp({ env, db, checks, messaging, storage, push }: Ap
   await app.register(accountRoutes, { prefix: '/v1/me', ...closing });
   await app.register(publicAccountRoutes, closing);
   await app.register(adminAccountRoutes, { prefix: '/v1/admin/account-deletion-requests', ...closing });
+
+  const billing = { invoices: new InvoicesService(db), authenticate };
+  await app.register(retailerInvoiceRoutes, { prefix: '/v1/orders', ...billing });
+  await app.register(wholesalerInvoiceRoutes, { prefix: '/v1/wholesaler/orders', ...billing });
+  await app.register(adminInvoiceRoutes, { prefix: '/v1/admin/orders', ...billing });
 
   const reporting = { reports: new ReportsService(db), authenticate };
   await app.register(adminReportRoutes, { prefix: '/v1/admin', ...reporting });

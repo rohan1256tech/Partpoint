@@ -526,7 +526,12 @@ export const orders = pgTable(
     deliveryAcceptedAt: timestamp({ withTimezone: true }),
     /** Wrong delivery-OTP entries; locked after 5 until an admin resets it. */
     deliveryOtpAttempts: smallint().notNull().default(0),
-    invoiceKey: text(),
+    invoiceKey: text(), // unused: invoices are rendered on request from invoiceSnapshot
+    /** GST invoice number, assigned when the order is packed: PP<FY>-<serial>, e.g. PP2627-000042. */
+    invoiceNumber: text(),
+    invoiceDate: timestamp({ withTimezone: true }),
+    /** Seller and buyer details frozen at invoicing, so later profile edits never change an invoice. */
+    invoiceSnapshot: jsonb(),
     cancelReason: text(),
     deliveredAt: timestamp({ withTimezone: true }),
     createdAt: createdAt(),
@@ -534,6 +539,7 @@ export const orders = pgTable(
   },
   (t) => [
     uniqueIndex('orders_number_uq').on(t.orderNumber),
+    uniqueIndex('orders_invoice_number_uq').on(t.wholesalerId, t.invoiceNumber),
     index('orders_retailer_idx').on(t.retailerId, t.createdAt),
     index('orders_wholesaler_idx').on(t.wholesalerId, t.createdAt),
     index('orders_delivery_idx').on(t.deliveryPartnerId, t.status),
@@ -565,6 +571,20 @@ export const orderItems = pgTable(
     lineTotalPaise: paise().notNull(),
   },
   (t) => [index('order_items_order_idx').on(t.orderId), check('order_items_qty_ck', sql`${t.qty} > 0`)],
+);
+
+/** Consecutive invoice serials per wholesaler and Indian financial year (GST rule 46). */
+export const invoiceCounters = pgTable(
+  'invoice_counters',
+  {
+    wholesalerId: uuid()
+      .notNull()
+      .references(() => users.id),
+    /** e.g. "2627" for April 2026 to March 2027. */
+    financialYear: text().notNull(),
+    lastSerial: integer().notNull(),
+  },
+  (t) => [primaryKey({ columns: [t.wholesalerId, t.financialYear] })],
 );
 
 /** Append-only status history (drives tracking timeline and audit). */

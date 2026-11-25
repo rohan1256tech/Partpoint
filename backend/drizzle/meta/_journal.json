@@ -71,6 +71,13 @@
       "when": 1795637193253,
       "tag": "0009_admin_totp",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1795637648689,
+      "tag": "0010_invoices",
+      "breakpoints": true
     }
   ]
 }
