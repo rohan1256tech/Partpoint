@@ -51,7 +51,8 @@ export const otpChannel = pgEnum('otp_channel', ['sms', 'email']);
 export const otpPurpose = pgEnum('otp_purpose', ['login', 'signup', 'reset_password', 'verify_email']);
 export const productStatus = pgEnum('product_status', ['draft', 'active', 'hidden', 'blocked']);
 export const discountType = pgEnum('discount_type', ['percent', 'flat']);
-export const checkoutStatus = pgEnum('checkout_status', ['pending_payment', 'paid', 'failed', 'expired']);
+/** 'placed': orders created without online payment (settled offline in v1). The rest are for a future gateway. */
+export const checkoutStatus = pgEnum('checkout_status', ['pending_payment', 'paid', 'failed', 'expired', 'placed']);
 export const paymentStatus = pgEnum('payment_status', ['created', 'authorized', 'captured', 'failed', 'refunded']);
 export const orderStatus = pgEnum('order_status', [
   'placed',

@@ -24,6 +24,7 @@ import type {
   variantUpdate,
 } from './catalog.schemas.js';
 import { pricingProblems, type Slab } from './pricing.js';
+import { publicProductFilters } from './visibility.js';
 
 type ProductRow = typeof products.$inferSelect;
 type ProductStatus = ProductRow['status'];
@@ -256,11 +257,25 @@ export class ProductsService {
 
   browse(q: z.infer<typeof browseQuery>) {
     return this.list('public', q, [
-      ...this.publicFilters(),
+      ...publicProductFilters(),
       q.categoryId ? sql`(p.category_id = ${q.categoryId} OR c.parent_id = ${q.categoryId})` : undefined,
       q.brandId ? sql`p.brand_id = ${q.brandId}` : undefined,
       q.wholesalerId ? sql`p.wholesaler_id = ${q.wholesalerId}` : undefined,
     ]);
+  }
+
+  /** Buyer-visible summaries for the given products, in the given order. Hidden products are skipped. */
+  async summariesByIds(ids: string[]): Promise<ProductSummary[]> {
+    if (ids.length === 0) return [];
+    const { items } = await this.list('public', { limit: ids.length }, [
+      ...publicProductFilters(),
+      sql`p.id IN (${sql.join(
+        ids.map((id) => sql`${id}::uuid`),
+        sql`, `,
+      )})`,
+    ]);
+    const byId = new Map(items.map((i) => [i.id, i]));
+    return ids.flatMap((id) => byId.get(id) ?? []);
   }
 
   async getPublic(productId: string): Promise<ProductDetail> {
@@ -269,7 +284,7 @@ export class ProductsService {
       JOIN users u ON u.id = p.wholesaler_id
       JOIN categories c ON c.id = p.category_id
       LEFT JOIN brands b ON b.id = p.brand_id
-      WHERE p.id = ${productId} AND ${sql.join(this.publicFilters(), sql` AND `)}`);
+      WHERE p.id = ${productId} AND ${sql.join(publicProductFilters(), sql` AND `)}`);
     if (rows.rows.length === 0) throw notFound('PRODUCT_NOT_FOUND', 'Product not found');
     const [p] = await this.db.select().from(products).where(eq(products.id, productId));
     return this.detail(p as ProductRow, 'public');
@@ -325,17 +340,6 @@ export class ProductsService {
   }
 
   // ================================================================ internals
-
-  /** Visible to buyers: live product, approved wholesaler, active category/brand, at least one active variant. */
-  private publicFilters(): SQL[] {
-    return [
-      sql`p.status = 'active'`,
-      sql`u.status = 'approved' AND u.deleted_at IS NULL`,
-      sql`c.is_active AND (c.parent_id IS NULL OR EXISTS (SELECT 1 FROM categories pc WHERE pc.id = c.parent_id AND pc.is_active))`,
-      sql`(p.brand_id IS NULL OR b.is_active)`,
-      sql`EXISTS (SELECT 1 FROM product_variants av WHERE av.product_id = p.id AND av.is_active)`,
-    ];
-  }
 
   private async list(
     viewer: Viewer,

@@ -10,6 +10,18 @@ import { createStorage, type Storage } from './lib/storage.js';
 import { adminCatalogRoutes, catalogRoutes, wholesalerProductRoutes } from './modules/catalog/catalog.routes.js';
 import { ProductsService } from './modules/catalog/products.service.js';
 import { TaxonomyService } from './modules/catalog/taxonomy.service.js';
+import { addressRoutes, AddressesService } from './modules/addresses/addresses.js';
+import { CartService } from './modules/orders/cart.service.js';
+import { CouponsService } from './modules/orders/coupons.service.js';
+import {
+  adminOrderRoutes,
+  cartRoutes,
+  retailerOrderRoutes,
+  wholesalerOrderRoutes,
+} from './modules/orders/orders.routes.js';
+import { OrdersService } from './modules/orders/orders.service.js';
+import { SettingsService } from './modules/settings/settings.service.js';
+import { WishlistService, wishlistRoutes } from './modules/wishlist/wishlist.js';
 import { authRoutes } from './modules/auth/auth.routes.js';
 import { AuthService } from './modules/auth/auth.service.js';
 import { OtpService } from './modules/auth/otp.service.js';
@@ -111,6 +123,27 @@ export async function buildApp({ env, db, checks, messaging, storage }: AppDeps)
   await app.register(catalogRoutes, { prefix: '/v1', ...catalog });
   await app.register(wholesalerProductRoutes, { prefix: '/v1/wholesaler/products', ...catalog });
   await app.register(adminCatalogRoutes, { prefix: '/v1/admin', ...catalog });
+
+  const settings = new SettingsService(db);
+  const addresses = new AddressesService(db);
+  const coupons = new CouponsService();
+  const cart = new CartService(db, images, settings, coupons);
+  const shopping = {
+    cart,
+    orders: new OrdersService(db, cart, addresses, coupons, settings),
+    settings,
+    authenticate,
+  };
+  await app.register(addressRoutes, { prefix: '/v1/me/addresses', addresses, authenticate });
+  await app.register(wishlistRoutes, {
+    prefix: '/v1/wishlist',
+    wishlist: new WishlistService(db, catalog.products),
+    authenticate,
+  });
+  await app.register(cartRoutes, { prefix: '/v1/cart', ...shopping });
+  await app.register(retailerOrderRoutes, { prefix: '/v1/orders', ...shopping });
+  await app.register(wholesalerOrderRoutes, { prefix: '/v1/wholesaler/orders', ...shopping });
+  await app.register(adminOrderRoutes, { prefix: '/v1/admin', ...shopping });
 
   return app;
 }

@@ -105,6 +105,9 @@ RETAILER    Live status updates → Rate & review → Reorder
 BACKEND     Commission computed → wholesaler payable recorded → delivery earnings recorded
 ```
 
+> **Current build:** online payment is deferred (see [Open Decisions](#open-decisions)). "Checkout → Pay" is
+> currently "Place order": stock is taken and the orders are created immediately; payment is settled offline.
+
 ### 4. Money flow
 ```
 Retailer pays → Platform's Razorpay account → Platform commission retained
@@ -409,6 +412,7 @@ These are estimates as of Nov 2026, at about ₹88 per US$1, and include 18% GST
 | Decision | Current assumption |
 |---|---|
 | Udhaar / RMA / geofence in v1? | No. Listed as Phase 2. |
+| Online payment (Razorpay) | **Deferred.** Orders are placed straight from the cart and payment is settled offline for now. The checkout record that groups a retailer's orders is kept so Razorpay can be added later without schema rework. |
 | Android language | Kotlin + Jetpack Compose |
 | Server | AWS Lightsail Mumbai (2 GB) |
 | SMS provider | Fast2SMS (confirm whether its OTP route needs DLT) |

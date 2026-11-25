@@ -36,6 +36,20 @@
       "when": 1795633957612,
       "tag": "0004_product_status_reason",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1795634834550,
+      "tag": "0005_checkout_placed",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1795634835468,
+      "tag": "0006_order_number_seq",
+      "breakpoints": true
     }
   ]
 }

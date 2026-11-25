@@ -40,6 +40,23 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Migrations `0002_pg_trgm`, `0003_catalog_search` (trigram and browse indexes, category parent FK),
   `0004_product_status_reason`.
 
+- Shopping and orders (online payment deferred; orders are settled offline):
+  - Retailer addresses (`/v1/me/addresses`): up to 10, always exactly one default, private to the owner.
+  - Wishlist (`/v1/wishlist`): idempotent add/remove; products no longer for sale drop out of the list.
+  - Cart (`/v1/cart`): bulk-slab pricing, lines grouped by wholesaler, per-line issues
+    (unavailable, below minimum quantity, out of stock), coupon preview with a reason when it does not apply.
+  - Place order (`POST /v1/orders`): one transaction locks the variants, re-prices, takes stock, creates one
+    order per wholesaler (numbers like `PP-20261126-000042`) and empties the cart. Idempotency key makes retries
+    safe; concurrent orders cannot oversell.
+  - Coupons: percent (with cap) or flat, dates, minimum order, total and per-retailer limits; the discount is
+    shared across wholesaler orders exactly to the paisa.
+  - Order lifecycle: wholesaler accept → pack or reject (with reason); retailer cancels while placed; admin
+    cancels until pickup (audited). Cancelling returns stock. Every change is on the order timeline.
+  - Each party sees only its own orders. Wholesalers see the delivery area, not the full address; retailers
+    do not see commission.
+  - Admin settings (`/v1/admin/settings`): commission %, delivery fee per wholesaler order, minimum order value.
+- Migrations `0005_checkout_placed`, `0006_order_number_seq`.
+
 ### Fixed
 - Blank values in `.env` (e.g. `DEMO_OTP=`) stopped the API from starting; they now mean "not set".
 - Deliberate 503 errors (`DELIVERY_FAILED`, `STORAGE_NOT_CONFIGURED`) were reported to clients as a generic

@@ -147,14 +147,14 @@ export async function signIn(
 
 /** Thin inject wrapper: api(t).post(url, body, token). */
 export function api(t: TestContext) {
-  const call = (method: 'GET' | 'POST' | 'PATCH' | 'DELETE') => (url: string, token?: string, payload?: unknown) =>
+  const call = (method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE') => (url: string, token?: string, payload?: unknown) =>
     t.app.inject({
       method,
       url,
       ...(payload !== undefined ? { payload: payload as object } : {}),
       ...(token ? { headers: { authorization: `Bearer ${token}` } } : {}),
     });
-  return { get: call('GET'), post: call('POST'), patch: call('PATCH'), del: call('DELETE') };
+  return { get: call('GET'), post: call('POST'), put: call('PUT'), patch: call('PATCH'), del: call('DELETE') };
 }
 
 /** Empties every application table (migrations bookkeeping lives in another schema). */

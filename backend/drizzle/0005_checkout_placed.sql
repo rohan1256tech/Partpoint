@@ -1,0 +1,1 @@
+ALTER TYPE "public"."checkout_status" ADD VALUE 'placed';
