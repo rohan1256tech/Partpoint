@@ -17,6 +17,8 @@ export const listOrdersQuery = z.object({
   status: z
     .enum(['placed', 'accepted', 'packed', 'assigned', 'picked_up', 'out_for_delivery', 'delivered', 'cancelled'])
     .optional(),
+  /** active = assigned/picked up/out for delivery; history = delivered/cancelled. */
+  scope: z.enum(['active', 'history']).optional(),
   retailerId: z.uuid().optional(),
   wholesalerId: z.uuid().optional(),
   limit: z.coerce.number().int().min(1).max(50).default(20),

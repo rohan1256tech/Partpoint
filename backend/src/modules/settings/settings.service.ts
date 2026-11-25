@@ -11,6 +11,8 @@ export const SettingsSchema = z.object({
   deliveryFeePaise: z.number().int().min(0).max(100_000),
   /** Smallest order value per wholesaler, in paise (0 = no minimum). */
   minOrderPaise: z.number().int().min(0).max(10_000_000),
+  /** What a delivery partner earns per delivered order, in paise. */
+  deliveryEarningPaise: z.number().int().min(0).max(100_000),
 });
 export type PlatformSettings = z.infer<typeof SettingsSchema>;
 export const settingsPatch = SettingsSchema.partial().strict();
@@ -19,6 +21,7 @@ export const DEFAULT_SETTINGS: PlatformSettings = {
   commissionBps: 500,
   deliveryFeePaise: 0,
   minOrderPaise: 0,
+  deliveryEarningPaise: 0,
 };
 
 const CACHE_MS = 60_000;

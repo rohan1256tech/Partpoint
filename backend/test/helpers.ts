@@ -1,13 +1,27 @@
 import type { FastifyInstance } from 'fastify';
-import { sql } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 import { buildApp } from '../src/app.js';
 import { loadEnv, type Env } from '../src/config/env.js';
 import { createDb, type Database } from '../src/db/index.js';
 import type { Messaging } from '../src/lib/messaging.js';
-import { users, wholesalerProfiles, retailerProfiles } from '../src/db/schema.js';
+import { deliveryProfiles, users, wholesalerProfiles, retailerProfiles } from '../src/db/schema.js';
+import type { PushMessage, PushResult, PushSender } from '../src/lib/push.js';
 import { hashPassword } from '../src/lib/password.js';
 import type { PresignedUpload, Storage, StoredObject } from '../src/lib/storage.js';
 import { testDatabaseUrl } from './global-setup.js';
+
+/** Records pushes. Tokens starting with "dead" behave like uninstalled apps. */
+export class FakePush implements PushSender {
+  readonly sent: { token: string; message: PushMessage }[] = [];
+  async send(token: string, message: PushMessage): Promise<PushResult> {
+    if (token.startsWith('dead')) return 'invalid_token';
+    this.sent.push({ token, message });
+    return 'sent';
+  }
+  titlesFor(token: string): string[] {
+    return this.sent.filter((s) => s.token === token).map((s) => s.message.title);
+  }
+}
 
 /** In-memory object store; tests "upload" with put(). */
 export class FakeStorage implements Storage {
@@ -66,6 +80,9 @@ export interface TestContext {
   db: Database;
   messaging: FakeMessaging;
   storage: FakeStorage;
+  push: FakePush;
+  /** Waits for fire-and-forget push notifications to finish. */
+  pushes: () => Promise<void>;
   close: () => Promise<void>;
 }
 
@@ -77,10 +94,12 @@ export async function createTestApp(
   const { db, pool } = createDb(env.DATABASE_URL, 5);
   const messaging = new FakeMessaging();
   const storage = new FakeStorage();
+  const push = new FakePush();
   const app = await buildApp({
     env,
     db,
     messaging,
+    push,
     ...(opts.realStorage ? {} : { storage }),
     checks: { postgres: async () => void (await pool.query('SELECT 1')) },
   });
@@ -89,6 +108,8 @@ export async function createTestApp(
     db,
     messaging,
     storage,
+    push,
+    pushes: () => app.notifications.idle(),
     close: async () => {
       await app.close();
       await pool.end();
@@ -134,6 +155,10 @@ export async function signIn(
     });
   }
   if (role === 'retailer') await t.db.insert(retailerProfiles).values({ userId: id, shopName: `Shop ${seq}` });
+  if (role === 'delivery') {
+    await t.db.update(users).set({ phone: `+9190000${String(10000 + seq).slice(-5)}` }).where(eq(users.id, id));
+    await t.db.insert(deliveryProfiles).values({ userId: id, vehicleType: 'bike', isAvailable: true });
+  }
 
   const app = role === 'admin' ? 'admin' : role === 'delivery' ? 'delivery' : 'partpoint';
   const res = await t.app.inject({

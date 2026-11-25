@@ -513,7 +513,11 @@ export const orders = pgTable(
     deliveryFeePaise: paise().notNull().default(0),
     totalPaise: paise().notNull(),
     commissionPaise: paise().notNull().default(0),
-    deliveryOtpHash: text(),
+    deliveryOtpHash: text(), // unused: the delivery OTP is derived from OTP_SECRET + order id (see delivery-otp.ts)
+    /** When the assigned delivery partner accepted the job. */
+    deliveryAcceptedAt: timestamp({ withTimezone: true }),
+    /** Wrong delivery-OTP entries; locked after 5 until an admin resets it. */
+    deliveryOtpAttempts: smallint().notNull().default(0),
     invoiceKey: text(),
     cancelReason: text(),
     deliveredAt: timestamp({ withTimezone: true }),

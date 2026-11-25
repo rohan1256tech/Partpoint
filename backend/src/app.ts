@@ -6,7 +6,11 @@ import type { Env } from './config/env.js';
 import type { Database } from './db/index.js';
 import { AppError } from './lib/errors.js';
 import { createMessaging, type Messaging } from './lib/messaging.js';
+import { createPushSender, type PushSender } from './lib/push.js';
 import { createStorage, type Storage } from './lib/storage.js';
+import { adminDeliveryRoutes, deliveryRoutes, pushTokenRoutes } from './modules/delivery/delivery.routes.js';
+import { DeliveryService } from './modules/delivery/delivery.service.js';
+import { NotificationService } from './modules/notifications/notifications.service.js';
 import { adminCatalogRoutes, catalogRoutes, wholesalerProductRoutes } from './modules/catalog/catalog.routes.js';
 import { ProductsService } from './modules/catalog/products.service.js';
 import { TaxonomyService } from './modules/catalog/taxonomy.service.js';
@@ -40,9 +44,11 @@ export interface AppDeps {
   messaging?: Messaging;
   /** Overrides image storage (tests). */
   storage?: Storage;
+  /** Overrides the push sender (tests). */
+  push?: PushSender;
 }
 
-export async function buildApp({ env, db, checks, messaging, storage }: AppDeps): Promise<FastifyInstance> {
+export async function buildApp({ env, db, checks, messaging, storage, push }: AppDeps): Promise<FastifyInstance> {
   const app = Fastify({
     logger: {
       level: env.NODE_ENV === 'test' ? 'silent' : env.LOG_LEVEL,
@@ -106,7 +112,10 @@ export async function buildApp({ env, db, checks, messaging, storage }: AppDeps)
     env.CONSENT_VERSION,
     app.log,
   );
-  const users = new UsersService(db, sessions);
+  const notifications = new NotificationService(db, push ?? createPushSender(env, app.log), app.log);
+  app.decorate('notifications', notifications);
+  app.addHook('onClose', () => notifications.idle()); // let queued pushes finish on shutdown
+  const users = new UsersService(db, sessions, notifications);
   const authenticate = createAuthGuard(db, signer);
   const images = storage ?? createStorage(env);
   const catalog = {
@@ -130,7 +139,7 @@ export async function buildApp({ env, db, checks, messaging, storage }: AppDeps)
   const cart = new CartService(db, images, settings, coupons);
   const shopping = {
     cart,
-    orders: new OrdersService(db, cart, addresses, coupons, settings),
+    orders: new OrdersService(db, cart, addresses, coupons, settings, env.OTP_SECRET, notifications),
     settings,
     authenticate,
   };
@@ -144,6 +153,16 @@ export async function buildApp({ env, db, checks, messaging, storage }: AppDeps)
   await app.register(retailerOrderRoutes, { prefix: '/v1/orders', ...shopping });
   await app.register(wholesalerOrderRoutes, { prefix: '/v1/wholesaler/orders', ...shopping });
   await app.register(adminOrderRoutes, { prefix: '/v1/admin', ...shopping });
+
+  const fleet = {
+    delivery: new DeliveryService(db, settings, env.OTP_SECRET, notifications),
+    orders: shopping.orders,
+    notifications,
+    authenticate,
+  };
+  await app.register(deliveryRoutes, { prefix: '/v1/delivery', ...fleet });
+  await app.register(adminDeliveryRoutes, { prefix: '/v1/admin', ...fleet });
+  await app.register(pushTokenRoutes, { prefix: '/v1/me', ...fleet });
 
   return app;
 }

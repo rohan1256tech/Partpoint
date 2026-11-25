@@ -56,6 +56,18 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
     do not see commission.
   - Admin settings (`/v1/admin/settings`): commission %, delivery fee per wholesaler order, minimum order value.
 - Migrations `0005_checkout_placed`, `0006_order_number_seq`.
+- Delivery (`/v1/delivery`, `/v1/admin`):
+  - Admin lists delivery partners (availability, active jobs) and assigns or reassigns packed orders.
+  - Partner toggles availability, accepts or declines a job (declined jobs return to the queue), picks up,
+    goes out for delivery and delivers with the retailer's 4-digit code. The code is derived from a server
+    secret and the order id (nothing stored); 5 wrong tries lock it until an admin resets it.
+  - DPDP: the partner sees the retailer's address and phone, and the pickup point, only while the delivery is
+    active; afterwards only the area.
+  - Earnings per delivered order (admin setting), with today / 7 days / month / all-time / unpaid totals.
+- Push notifications (FCM HTTP v1, no SDK): device token registration (`/v1/me/push-token`); pushes for
+  account approval, new order, accepted, packed, assigned, reassigned, picked up, out for delivery, delivered
+  and cancelled. Sent after the response; dead tokens are removed. Pushes carry only the order number.
+- Migration `0007_delivery`.
 
 ### Fixed
 - Blank values in `.env` (e.g. `DEMO_OTP=`) stopped the API from starting; they now mean "not set".

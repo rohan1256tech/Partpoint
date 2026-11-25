@@ -50,6 +50,9 @@ const EnvSchema = z
     R2_BUCKET_NAME: z.string().optional(),
     /** Public CDN base for images, e.g. https://img.example.in */
     R2_PUBLIC_URL: z.url().optional(),
+
+    /** Firebase service-account JSON (raw or base64). Optional in development: pushes are logged instead. */
+    FIREBASE_SERVICE_ACCOUNT: z.string().optional(),
   })
   .superRefine((env, ctx) => {
     if (env.DEMO_PHONES.length > 0 && !env.DEMO_OTP) {
@@ -74,6 +77,7 @@ const EnvSchema = z
         'R2_SECRET_ACCESS_KEY',
         'R2_BUCKET_NAME',
         'R2_PUBLIC_URL',
+        'FIREBASE_SERVICE_ACCOUNT',
       ] as const) {
         if (!env[key]) ctx.addIssue({ code: 'custom', path: [key], message: 'required in production' });
       }

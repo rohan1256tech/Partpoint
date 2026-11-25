@@ -6,6 +6,7 @@ import { decodeCursor, encodeCursor } from '../../lib/cursor.js';
 import { conflict, notFound } from '../../lib/errors.js';
 import { toPublicUser, type PublicUser } from '../auth/auth.service.js';
 import type { SessionService } from '../auth/session.service.js';
+import type { NotificationService } from '../notifications/notifications.service.js';
 import type { Role } from '../auth/tokens.js';
 
 type Status = 'pending' | 'approved' | 'blocked';
@@ -26,6 +27,7 @@ export class UsersService {
   constructor(
     private readonly db: Database,
     private readonly sessions: SessionService,
+    private readonly notifications: NotificationService,
   ) {}
 
   async getWithProfile(userId: string): Promise<UserWithProfile> {
@@ -128,7 +130,13 @@ export class UsersService {
         ip,
       });
     });
-    // TODO(notifications module): push "Account approved" to the user's devices.
+    if (next === 'approved') {
+      this.notifications.notifyUsers([userId], {
+        title: 'Account approved',
+        body: 'Your Partpoint account is approved. You can start using the app now.',
+        data: { type: 'account', status: 'approved' },
+      });
+    }
     return this.getWithProfile(userId);
   }
 }

@@ -11,6 +11,7 @@ import {
   orders,
   productVariants,
   retailerProfiles,
+  users,
   wholesalerProfiles,
 } from '../../db/schema.js';
 import { audit } from '../../lib/audit.js';
@@ -22,11 +23,16 @@ import type { SettingsService } from '../settings/settings.service.js';
 import { loadVariantLines, type CartService } from './cart.service.js';
 import type { CouponsService } from './coupons.service.js';
 import type { listOrdersQuery, placeOrderBody } from './orders.schemas.js';
+import type { NotificationService } from '../notifications/notifications.service.js';
+import { deliveryOtp } from './delivery-otp.js';
 import { priceOrderGroups } from './pricing.js';
 
 type OrderRow = typeof orders.$inferSelect;
 export type OrderStatus = OrderRow['status'];
-export type OrderViewer = 'retailer' | 'wholesaler' | 'admin';
+export type OrderViewer = 'retailer' | 'wholesaler' | 'admin' | 'delivery';
+
+/** Statuses during which the delivery partner is actively handling the order. */
+export const ACTIVE_DELIVERY: readonly OrderStatus[] = ['assigned', 'picked_up', 'out_for_delivery'];
 
 export interface PlacedOrders {
   checkoutId: string;
@@ -73,6 +79,22 @@ export interface OrderDetail extends OrderSummary {
   timeline: { status: OrderStatus; note: string | null; at: string }[];
   cancelReason: string | null;
   deliveredAt: string | null;
+  /** Name and phone are shared only while the delivery is active. */
+  deliveryPartner: { id: string; name: string; phone: string | null } | null;
+  deliveryAccepted: boolean;
+  /** Retailer only, once the goods are on their way: read it out to the delivery partner. */
+  deliveryOtp: string | null;
+  /** Where to collect the goods; delivery partner (while active) and admin only. */
+  pickup: {
+    businessName: string;
+    addressLine: string;
+    city: string;
+    state: string;
+    pincode: string;
+    latitude: number | null;
+    longitude: number | null;
+    phone: string | null;
+  } | null;
 }
 
 /** Who may move an order from which states. */
@@ -97,6 +119,8 @@ export class OrdersService {
     private readonly addresses: AddressesService,
     private readonly coupons: CouponsService,
     private readonly settings: SettingsService,
+    private readonly otpSecret: string,
+    private readonly notifications: NotificationService,
   ) {}
 
   // ================================================================ placing
@@ -232,8 +256,9 @@ export class OrdersService {
         await tx.delete(cartItems).where(eq(cartItems.userId, retailerId));
         return id;
       });
-      // TODO(notifications module): push "New order" to each wholesaler.
-      return (await this.placedById(checkoutId)) as PlacedOrders;
+      const placed = (await this.placedById(checkoutId)) as PlacedOrders;
+      for (const o of placed.orders) this.notifications.orderChanged(o.id, 'placed');
+      return placed;
     } catch (err) {
       // A concurrent retry with the same key won the race: return its result.
       if (isUniqueViolation(err)) {
@@ -282,6 +307,7 @@ export class OrdersService {
   private scope(viewer: OrderViewer, userId: string): SQL | undefined {
     if (viewer === 'retailer') return eq(orders.retailerId, userId);
     if (viewer === 'wholesaler') return eq(orders.wholesalerId, userId);
+    if (viewer === 'delivery') return eq(orders.deliveryPartnerId, userId);
     return undefined;
   }
 
@@ -292,6 +318,8 @@ export class OrdersService {
   ): Promise<{ items: OrderSummary[]; nextCursor: string | null }> {
     const filters: (SQL | undefined)[] = [this.scope(viewer, userId)];
     if (q.status) filters.push(eq(orders.status, q.status));
+    if (q.scope === 'active') filters.push(inArray(orders.status, [...ACTIVE_DELIVERY]));
+    if (q.scope === 'history') filters.push(inArray(orders.status, ['delivered', 'cancelled']));
     if (viewer === 'admin' && q.retailerId) filters.push(eq(orders.retailerId, q.retailerId));
     if (viewer === 'admin' && q.wholesalerId) filters.push(eq(orders.wholesalerId, q.wholesalerId));
     if (q.cursor) {
@@ -337,14 +365,51 @@ export class OrdersService {
     ]);
     const o = row.order;
     const address = o.addressSnapshot as AddressSnapshot;
+    const active = ACTIVE_DELIVERY.includes(o.status);
+    const area = { city: address.city, state: address.state, pincode: address.pincode };
+
+    // DPDP: a delivery partner sees the retailer's address and phone only during an active delivery.
+    const fullAddress = viewer === 'retailer' || viewer === 'admin' || (viewer === 'delivery' && active);
+    const showPickup = viewer === 'admin' || (viewer === 'delivery' && active);
+    const [partner] = o.deliveryPartnerId
+      ? await this.db
+          .select({ id: users.id, name: users.name, phone: users.phone })
+          .from(users)
+          .where(eq(users.id, o.deliveryPartnerId))
+      : [];
+    const [pickup] = showPickup
+      ? await this.db
+          .select({
+            businessName: wholesalerProfiles.businessName,
+            addressLine: wholesalerProfiles.addressLine,
+            city: wholesalerProfiles.city,
+            state: wholesalerProfiles.state,
+            pincode: wholesalerProfiles.pincode,
+            latitude: wholesalerProfiles.latitude,
+            longitude: wholesalerProfiles.longitude,
+            phone: users.phone,
+          })
+          .from(wholesalerProfiles)
+          .innerJoin(users, eq(users.id, wholesalerProfiles.userId))
+          .where(eq(wholesalerProfiles.userId, o.wholesalerId))
+      : [];
+
     return {
       ...this.summary(o, row.businessName, row.shopName, items.length),
       subtotalPaise: o.subtotalPaise,
       discountPaise: o.discountPaise,
       deliveryFeePaise: o.deliveryFeePaise,
-      commissionPaise: viewer === 'retailer' ? null : o.commissionPaise,
-      address:
-        viewer === 'wholesaler' ? { city: address.city, state: address.state, pincode: address.pincode } : address,
+      commissionPaise: viewer === 'retailer' || viewer === 'delivery' ? null : o.commissionPaise,
+      address: fullAddress ? address : area,
+      deliveryPartner: partner
+        ? { id: partner.id, name: partner.name, phone: active || viewer === 'admin' ? partner.phone : null }
+        : null,
+      deliveryAccepted: o.deliveryAcceptedAt !== null,
+      deliveryOtp:
+        viewer === 'retailer' && (o.status === 'picked_up' || o.status === 'out_for_delivery')
+          ? deliveryOtp(this.otpSecret, o.id)
+          : null,
+      pickup: pickup ?? null,
       items: items.map((i) => ({
         productId: i.productId,
         variantId: i.variantId,
@@ -430,7 +495,7 @@ export class OrdersService {
         });
       }
     });
-    // TODO(notifications module): push the status change to the other party.
+    this.notifications.orderChanged(orderId, rule.to);
     return this.get(viewer, userId, orderId);
   }
 }
