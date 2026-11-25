@@ -80,6 +80,12 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Reports: admin dashboard (approvals, orders, GMV, commission, 30-day series, top wholesalers and products,
   open reports, unpaid earnings; cached 60 s); orders CSV export by IST date range; wholesaler sales report
   (JSON or CSV). CSV files open correctly in Excel (UTF-8 BOM) and neutralise formula injection.
+- Account deletion (Play policy, DPDP): in-app `POST /v1/me/delete-account` (any non-admin role, including
+  pending) erases name, phone, email, password, addresses, cart, wishlist, devices, sessions and codes, and
+  frees the phone/email for reuse; order records are kept for GST retention. Refused while orders are in
+  progress or money is unsettled. Public page `GET /account/delete` with a request form
+  (`POST /v1/account-deletion-requests`, no account enumeration) and an admin queue to complete or reject.
+- Migration `0008_account_deletion`.
 
 ### Fixed
 - Blank values in `.env` (e.g. `DEMO_OTP=`) stopped the API from starting; they now mean "not set".

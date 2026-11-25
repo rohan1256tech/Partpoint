@@ -57,6 +57,13 @@
       "when": 1795635490060,
       "tag": "0007_delivery",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1795637049251,
+      "tag": "0008_account_deletion",
+      "breakpoints": true
     }
   ]
 }

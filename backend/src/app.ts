@@ -11,6 +11,7 @@ import { createStorage, type Storage } from './lib/storage.js';
 import { adminDeliveryRoutes, deliveryRoutes, pushTokenRoutes } from './modules/delivery/delivery.routes.js';
 import { DeliveryService } from './modules/delivery/delivery.service.js';
 import { NotificationService } from './modules/notifications/notifications.service.js';
+import { AccountService, accountRoutes, adminAccountRoutes, publicAccountRoutes } from './modules/account/account.js';
 import { adminFinanceRoutes, FinanceService, wholesalerFinanceRoutes } from './modules/finance/finance.js';
 import { adminMarketingRoutes, bannerRoutes, MarketingService } from './modules/marketing/marketing.js';
 import { adminReportRoutes, ReportsService, wholesalerReportRoutes } from './modules/reports/reports.js';
@@ -55,7 +56,7 @@ export interface AppDeps {
 export async function buildApp({ env, db, checks, messaging, storage, push }: AppDeps): Promise<FastifyInstance> {
   const app = Fastify({
     logger: {
-      level: env.NODE_ENV === 'test' ? 'silent' : env.LOG_LEVEL,
+      level: env.NODE_ENV === 'test' ? (process.env.TEST_LOG ?? 'silent') : env.LOG_LEVEL,
       // Never log credentials or OTPs.
       redact: [
         'req.headers.authorization',
@@ -176,9 +177,15 @@ export async function buildApp({ env, db, checks, messaging, storage, push }: Ap
   await app.register(reviewRoutes, { prefix: '/v1', ...moderation });
   await app.register(adminReviewRoutes, { prefix: '/v1/admin/reviews', ...moderation });
 
-  const money = { finance: new FinanceService(db), authenticate };
+  const finance = new FinanceService(db);
+  const money = { finance, authenticate };
   await app.register(adminFinanceRoutes, { prefix: '/v1/admin/finance', ...money });
   await app.register(wholesalerFinanceRoutes, { prefix: '/v1/wholesaler/finance', ...money });
+
+  const closing = { account: new AccountService(db, finance), authenticate };
+  await app.register(accountRoutes, { prefix: '/v1/me', ...closing });
+  await app.register(publicAccountRoutes, closing);
+  await app.register(adminAccountRoutes, { prefix: '/v1/admin/account-deletion-requests', ...closing });
 
   const reporting = { reports: new ReportsService(db), authenticate };
   await app.register(adminReportRoutes, { prefix: '/v1/admin', ...reporting });

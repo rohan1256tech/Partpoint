@@ -97,7 +97,8 @@ export const users = pgTable(
     uniqueIndex('users_phone_uq').on(t.phone),
     uniqueIndex('users_email_uq').on(t.email),
     index('users_role_status_idx').on(t.role, t.status),
-    check('users_contact_ck', sql`${t.phone} IS NOT NULL OR ${t.email} IS NOT NULL`),
+    // Every live account needs a way to sign in; deleted accounts have their contact details erased.
+    check('users_contact_ck', sql`${t.deletedAt} IS NOT NULL OR ${t.phone} IS NOT NULL OR ${t.email} IS NOT NULL`),
   ],
 );
 
@@ -714,12 +715,20 @@ export const settings = pgTable('settings', {
 });
 
 /** Account deletion requests (in-app and public web form — required by Play policy). */
-export const accountDeletionRequests = pgTable('account_deletion_requests', {
-  id: id(),
-  userId: uuid().references(() => users.id, { onDelete: 'set null' }),
-  contact: text().notNull(),
-  reason: text(),
-  status: deletionStatus().notNull().default('requested'),
-  processedAt: timestamp({ withTimezone: true }),
-  createdAt: createdAt(),
-});
+export const accountDeletionRequests = pgTable(
+  'account_deletion_requests',
+  {
+    id: id(),
+    userId: uuid().references(() => users.id, { onDelete: 'set null' }),
+    /** 'app' (signed in, processed at once) or 'web' (public form, processed by an admin). */
+    source: text().notNull().default('web'),
+    contact: text().notNull(),
+    reason: text(),
+    status: deletionStatus().notNull().default('requested'),
+    /** Outcome note, e.g. why a request was rejected. */
+    note: text(),
+    processedAt: timestamp({ withTimezone: true }),
+    createdAt: createdAt(),
+  },
+  (t) => [index('account_deletion_requests_status_idx').on(t.status, t.createdAt)],
+);
