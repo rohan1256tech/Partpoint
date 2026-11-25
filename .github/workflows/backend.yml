@@ -168,7 +168,8 @@ jobs:
 
   deploy:
     needs: image
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    # Set the repository variable DEPLOY_ENABLED=true once the VPS and its secrets exist.
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push' && vars.DEPLOY_ENABLED == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     environment: production
