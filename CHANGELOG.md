@@ -138,6 +138,16 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   restored at start; access token in memory, refresh token encrypted with an Android Keystore key, single
   shared refresh on 401. Backups off, HTTPS-only release builds, R8. Unit tests for phone numbers, refresh
   and retry. CI: `android.yml` (tests, debug APKs).
+- Fixed: a new admin signing in to the panel saw "Set up two-factor authentication to continue" instead of
+  the 2FA setup screen, because `/v1/me` was behind the 2FA gate. It is now readable before 2FA.
+- Admin panel UI review (screenshots of every page, desktop/phone, light/dark): tables scroll inside
+  themselves on phones instead of widening the page; explained empty states; sidebar counts for accounts
+  awaiting approval and reported reviews; user list shows the shop/business name and has search (name, shop,
+  phone, email); photo placeholders; labelled top-wholesaler and top-product lists; correct plurals; clickable
+  rows reachable by keyboard; a rider accepting a job is titled as such in the order timeline.
+- `pnpm db:seed:demo`: a realistic demo marketplace (categories, brands, 3 wholesalers with 15 products,
+  retailers, riders, 10 orders in every status, reviews, a reported review, coupons) created through the
+  real API; demo accounts sign in with fixed-OTP demo phone numbers (also the Play review accounts).
 
 ### Fixed
 - Blank values in `.env` (e.g. `DEMO_OTP=`) stopped the API from starting; they now mean "not set".

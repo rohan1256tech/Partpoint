@@ -8,6 +8,9 @@ import type { Banner, BannerLink, Brand, Category } from '../../api/types';
 import { ImageUpload } from '../../components/ImageUpload';
 import { date } from '../../lib/format';
 import { useAction } from '../../lib/mutations';
+import { rowLink } from '../../lib/rowLink';
+import { IconPhoto } from '@tabler/icons-react';
+import { EmptyState } from '../../components/EmptyState';
 
 type Draft = Omit<Banner, 'id' | 'imageKey' | 'startsAt' | 'endsAt'> & {
   id?: string;
@@ -68,7 +71,7 @@ export function BannersPage() {
       {banners.isLoading ? (
         <Loader />
       ) : (banners.data?.items ?? []).length === 0 ? (
-        <Text c="dimmed">No banners yet.</Text>
+        <EmptyState icon={IconPhoto} title="No banners yet">Banners appear at the top of the Partpoint home screen. Use them for offers or new brands.</EmptyState>
       ) : (
         <SimpleGrid cols={{ base: 1, sm: 2, lg: 3 }}>
           {(banners.data?.items ?? []).map((b) => (
@@ -76,10 +79,9 @@ export function BannersPage() {
               key={b.id}
               withBorder
               padding="sm"
-              style={{ cursor: 'pointer' }}
-              onClick={() =>
-                setDraft({ ...b, startsAt: b.startsAt ? new Date(b.startsAt) : null, endsAt: b.endsAt ? new Date(b.endsAt) : null })
-              }
+              {...rowLink(() =>
+                setDraft({ ...b, startsAt: b.startsAt ? new Date(b.startsAt) : null, endsAt: b.endsAt ? new Date(b.endsAt) : null }),
+              )}
             >
               <Card.Section>
                 <Image src={b.imageUrl} h={120} fit="cover" alt="" fallbackSrc="data:image/gif;base64,R0lGODlhAQABAAAAACw=" />

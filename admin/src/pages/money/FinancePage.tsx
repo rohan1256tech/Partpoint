@@ -7,6 +7,9 @@ import type { Payout, RiderBalance, WholesalerBalance } from '../../api/types';
 import { RupeeInput } from '../../components/MoneyInput';
 import { count, dateTime, rupees } from '../../lib/format';
 import { useAction } from '../../lib/mutations';
+import { rowLink } from '../../lib/rowLink';
+import { IconCash } from '@tabler/icons-react';
+import { EmptyState } from '../../components/EmptyState';
 
 /**
  * Payouts are settled manually by bank transfer in v1; this page records them.
@@ -61,7 +64,7 @@ function Wholesalers() {
         </Table.Thead>
         <Table.Tbody>
           {rows.map((r) => (
-            <Table.Tr key={r.wholesalerId} style={{ cursor: 'pointer' }} onClick={() => setSelected(r)}>
+            <Table.Tr key={r.wholesalerId} {...rowLink(() => setSelected(r))}>
               <Table.Td fw={600}>{r.businessName}</Table.Td>
               <Table.Td ta="right">{count(r.deliveredOrders)}</Table.Td>
               <Table.Td ta="right">{rupees(r.goodsPaise)}</Table.Td>
@@ -178,7 +181,7 @@ function Riders() {
   return (
     <Stack>
       {rows.length === 0 ? (
-        <Text c="dimmed">All rider earnings are paid.</Text>
+        <EmptyState icon={IconCash} title="All rider earnings are paid">Earnings appear here after each delivered order.</EmptyState>
       ) : (
         <Table>
           <Table.Thead>

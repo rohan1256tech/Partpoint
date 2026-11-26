@@ -5,6 +5,8 @@ import { api, errorMessage } from '../../api/client';
 import type { DeletionRequest } from '../../api/types';
 import { dateTime, humanize } from '../../lib/format';
 import { useAction } from '../../lib/mutations';
+import { IconUserX } from '@tabler/icons-react';
+import { EmptyState } from '../../components/EmptyState';
 
 type Status = 'requested' | 'completed' | 'rejected';
 const COLOR: Record<Status, string> = { requested: 'yellow', completed: 'green', rejected: 'gray' };
@@ -50,7 +52,7 @@ export function DeletionRequestsPage() {
       {isLoading ? (
         <Loader />
       ) : items.length === 0 ? (
-        <Text c="dimmed">{status === 'requested' ? 'No requests waiting.' : 'Nothing here.'}</Text>
+        <EmptyState icon={IconUserX} title={status === 'requested' ? 'No requests waiting' : 'Nothing here yet'}>Requests from the public account-deletion page show up here for you to confirm.</EmptyState>
       ) : (
         <Table highlightOnHover>
           <Table.Thead>

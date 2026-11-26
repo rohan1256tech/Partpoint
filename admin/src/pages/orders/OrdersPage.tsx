@@ -1,4 +1,4 @@
-import { Alert, Button, Group, Loader, Select, Stack, Table, Tabs, Text, Title } from '@mantine/core';
+import { Alert, Button, Group, Loader, Select, Stack, Table, Tabs, Title } from '@mantine/core';
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
 import { useSearchParams } from 'react-router';
@@ -7,6 +7,9 @@ import type { OrderStatus, OrderSummary, Page, PublicUser } from '../../api/type
 import { count, dateTime, rupees } from '../../lib/format';
 import { OrderDrawer } from './OrderDrawer';
 import { OrderStatusBadge } from './OrderStatusBadge';
+import { rowLink } from '../../lib/rowLink';
+import { IconReceipt } from '@tabler/icons-react';
+import { EmptyState } from '../../components/EmptyState';
 
 /** Tabs follow the operator's work: what needs a rider, what is on the road, what is done. */
 const TABS: { value: string; label: string; query: { status?: OrderStatus; scope?: 'active' | 'history' } }[] = [
@@ -80,7 +83,7 @@ export function OrdersPage() {
       {list.isLoading ? (
         <Loader />
       ) : orders.length === 0 ? (
-        <Text c="dimmed">No orders here.</Text>
+        <EmptyState icon={IconReceipt} title="No orders here">Orders appear as soon as retailers place them. Try another tab or wholesaler.</EmptyState>
       ) : (
         <Table highlightOnHover verticalSpacing="xs">
           <Table.Thead>
@@ -96,7 +99,7 @@ export function OrdersPage() {
           </Table.Thead>
           <Table.Tbody>
             {orders.map((o) => (
-              <Table.Tr key={o.id} style={{ cursor: 'pointer' }} onClick={() => setOpenId(o.id)}>
+              <Table.Tr key={o.id} {...rowLink(() => setOpenId(o.id))}>
                 <Table.Td ff="monospace" fz="sm">
                   {o.orderNumber}
                 </Table.Td>

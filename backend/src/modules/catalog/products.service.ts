@@ -25,6 +25,7 @@ import type {
 } from './catalog.schemas.js';
 import { pricingProblems, type Slab } from './pricing.js';
 import { publicProductFilters } from './visibility.js';
+import { escapeLike } from '../../lib/like.js';
 
 type ProductRow = typeof products.$inferSelect;
 type ProductStatus = ProductRow['status'];
@@ -83,7 +84,6 @@ export interface ProductDetail {
 
 type Viewer = 'public' | 'owner' | 'admin';
 
-const escapeLike = (s: string) => s.replace(/[\\%_]/g, '\\$&');
 
 function assertPricing(v: Parameters<typeof pricingProblems>[0]): void {
   const problems = pricingProblems(v);

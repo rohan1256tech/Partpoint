@@ -22,6 +22,7 @@ const idParams = z.object({ id: z.uuid() });
 const listQuery = z.object({
   status: z.enum(['pending', 'approved', 'blocked']).optional(),
   role: z.enum(['retailer', 'wholesaler', 'delivery']).optional(),
+  q: z.string().trim().min(2).max(100).optional(),
   limit: z.coerce.number().int().min(1).max(100).default(20),
   cursor: z.string().max(200).optional(),
 });

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
-import { ApiError, api, deviceId, onSessionChange, refreshSession, request, setAccessToken } from '../api/client';
+import { api, deviceId, onSessionChange, refreshSession, request, setAccessToken } from '../api/client';
 import type { LoginResult, PublicUser } from '../api/types';
 import { SessionContext, type SessionContextValue, type SessionStatus } from './context';
 
@@ -7,13 +7,9 @@ import { SessionContext, type SessionContextValue, type SessionStatus } from './
 async function resolveStatus(): Promise<{ status: SessionStatus; user: PublicUser | null }> {
   const user = await api.get<PublicUser>('/v1/me');
   if (user.role !== 'admin') return { status: 'signedOut', user: null };
-  try {
-    await api.get('/v1/admin/dashboard');
-    return { status: 'signedIn', user };
-  } catch (err) {
-    if (err instanceof ApiError && err.code === 'MFA_REQUIRED') return { status: 'needsMfaSetup', user };
-    throw err;
-  }
+  // An admin who has not turned on 2FA can only reach the setup screen.
+  const { enabled } = await api.get<{ enabled: boolean }>('/v1/admin/2fa');
+  return { status: enabled ? 'signedIn' : 'needsMfaSetup', user };
 }
 
 export function SessionProvider({ children }: { children: ReactNode }) {

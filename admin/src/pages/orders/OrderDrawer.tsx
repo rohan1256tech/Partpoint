@@ -156,14 +156,18 @@ function OrderBody({ o }: { o: OrderDetail }) {
       <Divider />
       <Text fw={600}>Timeline</Text>
       <Timeline bulletSize={14} lineWidth={2} active={o.timeline.length - 1}>
-        {o.timeline.map((e, idx) => (
-          <Timeline.Item key={idx} title={humanize(e.status)}>
-            <Text size="xs" c="dimmed">
-              {dateTime(e.at)}
-            </Text>
-            {e.note && <Text size="sm">{e.note}</Text>}
-          </Timeline.Item>
-        ))}
+        {o.timeline.map((e, idx) => {
+          // A second event in the same status (e.g. the rider accepting) is titled by what happened.
+          const repeat = idx > 0 && o.timeline[idx - 1]?.status === e.status && !!e.note;
+          return (
+            <Timeline.Item key={idx} title={repeat ? e.note : humanize(e.status)}>
+              <Text size="xs" c="dimmed">
+                {dateTime(e.at)}
+              </Text>
+              {e.note && !repeat && <Text size="sm">{e.note}</Text>}
+            </Timeline.Item>
+          );
+        })}
       </Timeline>
 
       {ADMIN_CANCELLABLE.includes(o.status) && <CancelSection o={o} invalidate={invalidate} />}

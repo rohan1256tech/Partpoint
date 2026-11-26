@@ -1,5 +1,6 @@
-import { ActionIcon, AppShell, Burger, Group, NavLink, ScrollArea, Text, Tooltip, useMantineColorScheme } from '@mantine/core';
+import { ActionIcon, AppShell, Badge, Burger, Group, NavLink, ScrollArea, Text, Tooltip, useMantineColorScheme } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
+import { useQuery } from '@tanstack/react-query';
 import {
   IconCash,
   IconCategory,
@@ -20,6 +21,8 @@ import {
   IconUserX,
 } from '@tabler/icons-react';
 import { NavLink as RouterLink, Outlet, useLocation } from 'react-router';
+import { api } from '../api/client';
+import type { Dashboard } from '../api/types';
 import { useSession } from '../auth/context';
 
 /** Sections of the panel, grouped by the kind of work. */
@@ -70,6 +73,16 @@ export function AppLayout() {
   const { user, signOut } = useSession();
   const { colorScheme, toggleColorScheme } = useMantineColorScheme();
   const { pathname } = useLocation();
+  // Work waiting for the operator, shown as counts in the sidebar. Shares the dashboard's cache.
+  const { data: dash } = useQuery({
+    queryKey: ['dashboard'],
+    queryFn: () => api.get<Dashboard>('/v1/admin/dashboard'),
+    refetchInterval: 60_000,
+  });
+  const waiting: Record<string, number> = {
+    '/users': dash?.users.pendingApprovals ?? 0,
+    '/marketing/reviews': dash?.openReviewReports ?? 0,
+  };
 
   return (
     <AppShell header={{ height: 56 }} navbar={{ width: 220, breakpoint: 'sm', collapsed: { mobile: !opened } }} padding="md">
@@ -111,6 +124,13 @@ export function AppLayout() {
                   to={to}
                   label={label}
                   leftSection={<Icon size={18} stroke={1.6} />}
+                  rightSection={
+                    waiting[to] ? (
+                      <Badge size="sm" circle color="red" aria-label={`${waiting[to]} waiting`}>
+                        {waiting[to]}
+                      </Badge>
+                    ) : undefined
+                  }
                   active={to === '/' ? pathname === '/' : pathname.startsWith(to)}
                   onClick={close}
                 />

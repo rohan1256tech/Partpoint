@@ -24,6 +24,10 @@ import { api, errorMessage } from '../../api/client';
 import type { Page, ProductDetail, ProductStatus, ProductSummary, PublicUser } from '../../api/types';
 import { count, dateTime, humanize, rupees } from '../../lib/format';
 import { useAction } from '../../lib/mutations';
+import { Thumb } from '../../components/Thumb';
+import { rowLink } from '../../lib/rowLink';
+import { IconPackage } from '@tabler/icons-react';
+import { EmptyState } from '../../components/EmptyState';
 
 const STATUS_COLOR: Record<ProductStatus, string> = { draft: 'gray', active: 'green', hidden: 'yellow', blocked: 'red' };
 
@@ -97,7 +101,7 @@ export function ProductsPage() {
       {list.isLoading ? (
         <Loader />
       ) : products.length === 0 ? (
-        <Text c="dimmed">No products match.</Text>
+        <EmptyState icon={IconPackage} title="No products match">Wholesalers add products in the Partpoint app. Try another status, wholesaler or search.</EmptyState>
       ) : (
         <Table highlightOnHover verticalSpacing="xs">
           <Table.Thead>
@@ -111,16 +115,16 @@ export function ProductsPage() {
           </Table.Thead>
           <Table.Tbody>
             {products.map((p) => (
-              <Table.Tr key={p.id} style={{ cursor: 'pointer' }} onClick={() => setOpenId(p.id)}>
+              <Table.Tr key={p.id} {...rowLink(() => setOpenId(p.id))}>
                 <Table.Td>
                   <Group gap="sm" wrap="nowrap">
-                    {p.thumbnailUrl ? <Image src={p.thumbnailUrl} w={36} h={36} radius="sm" alt="" /> : <div style={{ width: 36 }} />}
+                    <Thumb src={p.thumbnailUrl} size={36} />
                     <div>
                       <Text size="sm" fw={600}>
                         {p.name}
                       </Text>
                       <Text size="xs" c="dimmed">
-                        {[p.brandName, p.partNumber].filter(Boolean).join(' · ') || '—'}
+                        {[p.brandName, p.partNumber].filter(Boolean).join(' · ')}
                       </Text>
                     </div>
                   </Group>

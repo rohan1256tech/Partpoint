@@ -289,3 +289,8 @@ export interface DeletionRequest {
   processedAt: string | null;
   createdAt: string;
 }
+
+/** A row in the admin user list: the account plus the shop or business it represents. */
+export interface UserListItem extends PublicUser {
+  businessName: string | null;
+}

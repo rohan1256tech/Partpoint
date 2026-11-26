@@ -3,7 +3,6 @@ import {
   Badge,
   Button,
   Group,
-  Image,
   Loader,
   Modal,
   NumberInput,
@@ -22,6 +21,10 @@ import { api, errorMessage } from '../../api/client';
 import type { Category } from '../../api/types';
 import { ImageUpload } from '../../components/ImageUpload';
 import { useAction } from '../../lib/mutations';
+import { Thumb } from '../../components/Thumb';
+import { rowLink } from '../../lib/rowLink';
+import { IconCategory } from '@tabler/icons-react';
+import { EmptyState } from '../../components/EmptyState';
 
 type Draft = { id?: string; name: string; slug: string; parentId: string | null; sortOrder: number; isActive: boolean; imageKey?: string; imageUrl: string | null };
 const EMPTY: Draft = { name: '', slug: '', parentId: null, sortOrder: 0, isActive: true, imageUrl: null };
@@ -55,10 +58,10 @@ export function CategoriesPage() {
   });
 
   const row = (c: Category, child = false) => (
-    <Table.Tr key={c.id} style={{ cursor: 'pointer' }} onClick={() => setDraft({ ...c, imageUrl: c.imageUrl, imageKey: undefined })}>
+    <Table.Tr key={c.id} {...rowLink(() => setDraft({ ...c, imageUrl: c.imageUrl, imageKey: undefined }))}>
       <Table.Td pl={child ? 36 : undefined}>
         <Group gap="sm">
-          {c.imageUrl ? <Image src={c.imageUrl} w={28} h={28} radius="sm" alt="" /> : <div style={{ width: 28 }} />}
+          <Thumb src={c.imageUrl} size={28} />
           <Text size="sm" fw={child ? 400 : 600}>
             {c.name}
           </Text>
@@ -82,7 +85,7 @@ export function CategoriesPage() {
       {isLoading ? (
         <Loader />
       ) : tops.length === 0 ? (
-        <Text c="dimmed">No categories yet. Create the first one.</Text>
+        <EmptyState icon={IconCategory} title="No categories yet">Categories are the first thing retailers see. Create top-level ones like Engine or Brakes, then sub-categories.</EmptyState>
       ) : (
         <Table highlightOnHover>
           <Table.Thead>

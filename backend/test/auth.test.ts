@@ -360,6 +360,14 @@ describe('admin approval', () => {
     const list = await get('/v1/admin/users?status=pending', admin);
     expect(list.statusCode).toBe(200);
     expect(list.json().items.map((u: { id: string }) => u.id)).toEqual([user.id]);
+    expect(list.json().items[0].businessName).toEqual(expect.any(String));
+
+    // Search matches the shop name, case-insensitively; % and _ are literal.
+    const shop = list.json().items[0].businessName as string;
+    const found = await get(`/v1/admin/users?q=${encodeURIComponent(shop.slice(0, 4).toLowerCase())}`, admin);
+    expect(found.json().items.map((u: { id: string }) => u.id)).toEqual([user.id]);
+    expect((await get('/v1/admin/users?q=%25%25', admin)).json().items).toEqual([]);
+
 
     const res = await post(`/v1/admin/users/${user.id}/approve`, {}, admin);
     expect(res.statusCode).toBe(200);

@@ -1,0 +1,19 @@
+/* On phones, wide tables scroll inside themselves instead of making the whole page scroll sideways. */
+@media (max-width: 48em) {
+  .mantine-Table-table {
+    display: block;
+    overflow-x: auto;
+    white-space: nowrap;
+  }
+}
+
+/* Clickable table rows show it. */
+[role='button']:focus-visible {
+  outline: 2px solid var(--mantine-primary-color-filled);
+  outline-offset: -2px;
+}
+
+/* Numbers line up in columns. */
+td {
+  font-variant-numeric: tabular-nums;
+}
