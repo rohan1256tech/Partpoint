@@ -23,5 +23,8 @@ dependencies {
     api(libs.compose.material.icons)
     api(libs.compose.ui.tooling.preview)
     implementation(libs.androidx.activity.compose)
+    api(libs.coil.compose)
+    implementation(libs.coil.network.okhttp)
     debugImplementation(libs.compose.ui.tooling)
+    testImplementation(libs.junit)
 }

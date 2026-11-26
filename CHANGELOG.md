@@ -148,6 +148,16 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - `pnpm db:seed:demo`: a realistic demo marketplace (categories, brands, 3 wholesalers with 15 products,
   retailers, riders, 10 orders in every status, reviews, a reported review, coupons) created through the
   real API; demo accounts sign in with fixed-OTP demo phone numbers (also the Play review accounts).
+- Partpoint app, retailer side: bottom navigation (Home, Categories, Cart with count, Orders, Account). Home
+  with search, banner carousel, category tiles, brand chips and an endless product grid; search with
+  debounce; category/brand/seller lists; product page with photos, variant picker, bulk-price tiers that
+  highlight the tier reached, stock line, seller link, reviews, wishlist and a sticky add/update bar. Cart
+  grouped by seller with steppers, plain-language line problems, minimum-order hints, coupon, totals.
+  Checkout with address choice or inline new address and duplicate-proof ordering (idempotency key).
+  Orders: in-progress and past, status stepper, large delivery code, rider call, cancel while waiting for
+  the seller, GST invoice in the PDF viewer, star ratings after delivery. Account: addresses (add, edit,
+  default, delete), wishlist, sign out, delete account. Pull-to-refresh and retry everywhere.
+- Android: Coil image loading, shared formatting (Indian digit grouping, IST), leaner Gradle memory use.
 
 ### Fixed
 - Blank values in `.env` (e.g. `DEMO_OTP=`) stopped the API from starting; they now mean "not set".
