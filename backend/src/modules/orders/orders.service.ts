@@ -84,6 +84,8 @@ export interface OrderDetail extends OrderSummary {
   /** Name and phone are shared only while the delivery is active. */
   deliveryPartner: { id: string; name: string; phone: string | null } | null;
   deliveryAccepted: boolean;
+  /** Admin only: wrong delivery codes entered (locked at 5 until reset). */
+  deliveryOtpAttempts: number | null;
   /** Retailer only, once the goods are on their way: read it out to the delivery partner. */
   deliveryOtp: string | null;
   /** Where to collect the goods; delivery partner (while active) and admin only. */
@@ -402,6 +404,7 @@ export class OrdersService {
         ? { id: partner.id, name: partner.name, phone: active || viewer === 'admin' ? partner.phone : null }
         : null,
       deliveryAccepted: o.deliveryAcceptedAt !== null,
+      deliveryOtpAttempts: viewer === 'admin' ? o.deliveryOtpAttempts : null,
       deliveryOtp:
         viewer === 'retailer' && (o.status === 'picked_up' || o.status === 'out_for_delivery')
           ? deliveryOtp(this.otpSecret, o.id)

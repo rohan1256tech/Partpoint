@@ -11,6 +11,10 @@ const DashboardPage = lazy(() => import('./pages/DashboardPage').then((m) => ({ 
 const UsersPage = lazy(() => import('./pages/UsersPage').then((m) => ({ default: m.UsersPage })));
 const CategoriesPage = lazy(() => import('./pages/catalog/CategoriesPage').then((m) => ({ default: m.CategoriesPage })));
 const BrandsPage = lazy(() => import('./pages/catalog/BrandsPage').then((m) => ({ default: m.BrandsPage })));
+const OrdersPage = lazy(() => import('./pages/orders/OrdersPage').then((m) => ({ default: m.OrdersPage })));
+const DeliveryPartnersPage = lazy(() =>
+  import('./pages/delivery/DeliveryPartnersPage').then((m) => ({ default: m.DeliveryPartnersPage })),
+);
 const ProductsPage = lazy(() => import('./pages/catalog/ProductsPage').then((m) => ({ default: m.ProductsPage })));
 
 const Spinner = () => (
@@ -33,6 +37,8 @@ export function App() {
           <Route element={<AppLayout />}>
             <Route index element={<DashboardPage />} />
             <Route path="users" element={<UsersPage />} />
+            <Route path="orders" element={<OrdersPage />} />
+            <Route path="delivery-partners" element={<DeliveryPartnersPage />} />
             <Route path="catalog/categories" element={<CategoriesPage />} />
             <Route path="catalog/brands" element={<BrandsPage />} />
             <Route path="catalog/products" element={<ProductsPage />} />

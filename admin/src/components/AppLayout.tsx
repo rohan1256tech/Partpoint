@@ -1,12 +1,14 @@
 import { ActionIcon, AppShell, Burger, Group, NavLink, Text, Tooltip, useMantineColorScheme } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
-import { IconCategory, IconGauge, IconLogout, IconMoon, IconPackage, IconSun, IconTag, IconUsers } from '@tabler/icons-react';
+import { IconCategory, IconGauge, IconLogout, IconMoon, IconPackage, IconReceipt, IconSun, IconTag, IconTruckDelivery, IconUsers } from '@tabler/icons-react';
 import { NavLink as RouterLink, Outlet, useLocation } from 'react-router';
 import { useSession } from '../auth/context';
 
 /** Sections of the panel. Later slices add catalog, orders, delivery, marketing, finance, reports. */
 const NAV = [
   { to: '/', label: 'Dashboard', icon: IconGauge },
+  { to: '/orders', label: 'Orders', icon: IconReceipt },
+  { to: '/delivery-partners', label: 'Delivery partners', icon: IconTruckDelivery },
   { to: '/users', label: 'Users', icon: IconUsers },
   { to: '/catalog/products', label: 'Products', icon: IconPackage },
   { to: '/catalog/categories', label: 'Categories', icon: IconCategory },

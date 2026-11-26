@@ -120,3 +120,80 @@ export interface PresignedUpload {
   objectKey: string;
   upload: { method: 'PUT'; url: string; headers: Record<string, string>; expiresAt: string };
 }
+
+// ---------------------------------------------------------------- orders & delivery
+
+export type OrderStatus =
+  | 'placed'
+  | 'accepted'
+  | 'packed'
+  | 'assigned'
+  | 'picked_up'
+  | 'out_for_delivery'
+  | 'delivered'
+  | 'cancelled';
+
+export interface OrderSummary {
+  id: string;
+  orderNumber: string;
+  status: OrderStatus;
+  totalPaise: number;
+  itemCount: number;
+  wholesaler: { id: string; businessName: string };
+  retailer: { id: string; shopName: string };
+  createdAt: string;
+}
+
+export interface Address {
+  contactName: string;
+  contactPhone: string;
+  line1: string;
+  line2: string | null;
+  landmark: string | null;
+  city: string;
+  state: string;
+  pincode: string;
+}
+
+export interface OrderDetail extends OrderSummary {
+  subtotalPaise: number;
+  discountPaise: number;
+  deliveryFeePaise: number;
+  commissionPaise: number | null;
+  address: Address;
+  items: {
+    productId: string;
+    variantId: string;
+    productName: string;
+    variantName: string;
+    hsnCode: string | null;
+    gstRateBps: number;
+    qty: number;
+    unitPricePaise: number;
+    lineTotalPaise: number;
+  }[];
+  timeline: { status: OrderStatus; note: string | null; at: string }[];
+  cancelReason: string | null;
+  deliveredAt: string | null;
+  deliveryPartner: { id: string; name: string; phone: string | null } | null;
+  deliveryAccepted: boolean;
+  deliveryOtpAttempts: number | null;
+  pickup: {
+    businessName: string;
+    addressLine: string;
+    city: string;
+    state: string;
+    pincode: string;
+    phone: string | null;
+  } | null;
+}
+
+export interface DeliveryPartner {
+  id: string;
+  name: string;
+  phone: string | null;
+  vehicleType: string | null;
+  vehicleNumber: string | null;
+  isAvailable: boolean;
+  activeDeliveries: number;
+}

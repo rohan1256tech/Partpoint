@@ -8,5 +8,7 @@ export default defineConfig({
     // Integration tests share one Postgres database.
     fileParallelism: false,
     testTimeout: 20_000,
+    // Per-test setup builds an app and resets the database; allow for a busy machine.
+    hookTimeout: 30_000,
   },
 });

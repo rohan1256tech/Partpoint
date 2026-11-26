@@ -113,6 +113,12 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   bulk prices and images, block with reason / unblock). Images converted to WebP in the browser and uploaded
   straight to R2. Pages load on demand (initial bundle 201 → 134 KB gzipped). Admin category/brand lists now
   include image URLs.
+- Admin panel, orders and delivery: order list with work-based tabs (new, accepted, needs a rider, out with
+  riders, delivered, cancelled) and wholesaler filter, refreshing every 30 s; order detail with both parties,
+  items, totals and commission, timeline, GST invoice download, rider assignment/reassignment from available
+  riders, unlocking a locked delivery code, and cancellation with a reason. Delivery partners page with
+  availability and active deliveries. Admin order detail now reports wrong delivery-code attempts.
+- Backend tests: per-test setup timeout raised to 30 s (setup could exceed 10 s on a busy machine).
 
 ### Fixed
 - Blank values in `.env` (e.g. `DEMO_OTP=`) stopped the API from starting; they now mean "not set".
