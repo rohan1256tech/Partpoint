@@ -174,7 +174,10 @@ data class OrderSummary(
     val createdAt: String,
 )
 
-@Serializable data class PlacedOrders(val orders: List<OrderSummary>)
+/** The reply to placing an order: one short entry per seller (backend PlacedOrders). */
+@Serializable data class PlacedOrder(val id: String, val orderNumber: String, val wholesalerId: String, val totalPaise: Long)
+
+@Serializable data class PlacedOrders(val checkoutId: String, val totalPaise: Long, val orders: List<PlacedOrder>)
 
 @Serializable
 data class OrderItem(
@@ -190,11 +193,12 @@ data class OrderItem(
 @Serializable data class TimelineEvent(val status: String, val note: String? = null, val at: String)
 @Serializable data class PersonRef(val id: String, val name: String, val phone: String? = null)
 
+/** Retailers and riders get the full address; sellers only the area (city, state, PIN code). */
 @Serializable
 data class OrderAddress(
-    val contactName: String,
-    val contactPhone: String,
-    val line1: String,
+    val contactName: String? = null,
+    val contactPhone: String? = null,
+    val line1: String? = null,
     val line2: String? = null,
     val landmark: String? = null,
     val city: String,

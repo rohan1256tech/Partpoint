@@ -195,6 +195,11 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   verified (about 2.2–2.6 MB, all serializers kept). CI `release` job on main builds both signed AABs, keeps
   them with the R8 mapping files, and can publish to Play internal testing (switched off by variables until
   the Play account exists).
+- Fixed (found testing on a real phone): placing an order showed a technical error although the order
+  was created, because the app expected a full order summary in the reply; and the seller's order view
+  failed to load because sellers (correctly) receive only the delivery area, not the retailer's contact
+  and street. Both are covered by tests decoding the real replies. Privacy policy wording corrected to say
+  sellers see the delivery area. Savings green is lighter in dark mode for contrast.
 
 ### Fixed
 - Blank values in `.env` (e.g. `DEMO_OTP=`) stopped the API from starting; they now mean "not set".

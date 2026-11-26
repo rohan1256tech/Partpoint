@@ -326,7 +326,8 @@ fun SellerOrderScreen(onBack: () -> Unit, vm: SellerOrderViewModel = hiltViewMod
 
                     Column {
                         Text("Deliver to", style = MaterialTheme.typography.titleSmall)
-                        Text("${o.address.contactName}, ${o.address.city} ${o.address.pincode}", style = MaterialTheme.typography.bodyMedium)
+                        // Sellers get only the delivery area; Partpoint's rider has the full address.
+                        Text(listOfNotNull(o.retailer?.shopName, "${o.address.city} ${o.address.pincode}").joinToString(", "), style = MaterialTheme.typography.bodyMedium)
                     }
 
                     o.deliveryPartner?.let { rider ->

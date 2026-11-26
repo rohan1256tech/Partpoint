@@ -74,7 +74,7 @@ export function privacyPage(o: PrivacyPageOptions): string {
 
   <h2>Who can see your data</h2>
   <ul>
-    <li><strong>The other people in an order</strong>, only as much as they need: the seller sees the retailer's shop name and delivery address;
+    <li><strong>The other people in an order</strong>, only as much as they need: the seller sees the retailer's shop name and delivery area (city and PIN code);
         the delivery partner sees the pickup and delivery addresses and phone numbers; the retailer sees the delivery partner's name and phone number.</li>
     <li><strong>Partpoint staff</strong> who approve accounts, handle orders and support. Admin access requires two-factor authentication and is logged.</li>
     <li><strong>Service providers</strong> that run parts of the service for us under contract, only for that purpose:

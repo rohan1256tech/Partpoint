@@ -289,8 +289,8 @@ fun OrderDetailScreen(onBack: () -> Unit, onProduct: (String) -> Unit, vm: Order
                     Column {
                         Text("Delivering to", style = MaterialTheme.typography.titleSmall)
                         val a = o.address
-                        Text("${a.contactName} · ${a.contactPhone}", style = MaterialTheme.typography.bodyMedium)
-                        Text(listOfNotNull(a.line1, a.line2, a.landmark).joinToString(", ") + ", ${a.city} ${a.pincode}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(listOfNotNull(a.contactName, a.contactPhone).joinToString(" · "), style = MaterialTheme.typography.bodyMedium)
+                        Text((listOfNotNull(a.line1, a.line2, a.landmark) + "${a.city} ${a.pincode}").joinToString(", "), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
 
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {

@@ -284,10 +284,13 @@ class CheckoutViewModel @Inject constructor(private val api: ShopApi, val cart: 
 
     override suspend fun fetch() = CheckoutData(api.addresses().items)
 
-    suspend fun place(addressId: String): PlacedOrders {
+    /** Places the order; returns (order number, seller name, total) per seller for the confirmation. */
+    suspend fun place(addressId: String): List<Triple<String, String, Long>> {
+        // Seller names come from the cart the retailer just reviewed; the reply carries only seller ids.
+        val sellers = cart.cart.value.groups.associate { it.wholesaler.id to it.wholesaler.businessName }
         val placed = apiCall { api.placeOrder(PlaceOrderBody(addressId, idempotencyKey, cart.couponCode.value)) }
         cart.clearLocal()
-        return placed
+        return placed.orders.map { Triple(it.orderNumber, sellers[it.wholesalerId] ?: "Seller", it.totalPaise) }
     }
 
     suspend fun addAddress(input: AddressInput): Address {
@@ -299,7 +302,7 @@ class CheckoutViewModel @Inject constructor(private val api: ShopApi, val cart: 
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun CheckoutScreen(onBack: () -> Unit, onPlaced: (PlacedOrders) -> Unit, vm: CheckoutViewModel = hiltViewModel()) {
+fun CheckoutScreen(onBack: () -> Unit, onPlaced: (List<Triple<String, String, Long>>) -> Unit, vm: CheckoutViewModel = hiltViewModel()) {
     val state by vm.state.collectAsStateWithLifecycle()
     val cart by vm.cart.cart.collectAsStateWithLifecycle()
     var selected by rememberSaveable { mutableStateOf<String?>(null) }

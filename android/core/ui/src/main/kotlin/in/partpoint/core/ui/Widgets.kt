@@ -22,10 +22,12 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.semantics.contentDescription
@@ -85,7 +87,10 @@ fun PriceLine(pricePaise: Long, mrpPaise: Long?, modifier: Modifier = Modifier, 
     }
 }
 
-val SavingGreen = Color(0xFF15803D)
+/** Savings and success. Lighter in dark mode so it stays readable (WCAG AA on the dark surface). */
+val SavingGreen: Color
+    @Composable @ReadOnlyComposable
+    get() = if (MaterialTheme.colorScheme.surface.luminance() < 0.5f) Color(0xFF4ADE80) else Color(0xFF15803D)
 
 /** − qty + with large touch targets; [min] and [max] bound the value. */
 @Composable

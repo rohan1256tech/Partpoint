@@ -134,8 +134,7 @@ fun RetailerApp(me: Me, shell: RetailerShellViewModel = hiltViewModel()) {
             }
             composable<Checkout> {
                 CheckoutScreen(onBack = { nav.popBackStack() }, onPlaced = { placed ->
-                    val o = placed.orders
-                    nav.navigate(Placed(o.map { it.orderNumber }, o.map { it.wholesaler.businessName }, o.map { it.totalPaise })) { popUpTo(CartTab) }
+                    nav.navigate(Placed(placed.map { it.first }, placed.map { it.second }, placed.map { it.third })) { popUpTo(CartTab) }
                 })
             }
             composable<Placed> { e ->
