@@ -35,6 +35,9 @@ jobs:
           validate-wrappers: true
       - name: Install SDK platform 37.1
         run: yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-37.1" > /dev/null
+      - name: More memory for Gradle on CI
+        # gradle.properties is sized for an 8 GB laptop; GitHub runners have 16 GB. User-level settings win.
+        run: mkdir -p ~/.gradle && echo "org.gradle.jvmargs=-Xmx6g -XX:MaxMetaspaceSize=1g -Dfile.encoding=UTF-8" >> ~/.gradle/gradle.properties
       - name: Unit tests
         run: ./gradlew testDebugUnitTest --console=plain 2>&1 | tee -a "$RUNNER_TEMP/gradle.log"; exit ${PIPESTATUS[0]}
       - name: Build debug APKs
@@ -77,6 +80,9 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
       - name: Install SDK platform 37.1
         run: yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-37.1" > /dev/null
+      - name: More memory for Gradle on CI
+        # gradle.properties is sized for an 8 GB laptop; GitHub runners have 16 GB. User-level settings win.
+        run: mkdir -p ~/.gradle && echo "org.gradle.jvmargs=-Xmx6g -XX:MaxMetaspaceSize=1g -Dfile.encoding=UTF-8" >> ~/.gradle/gradle.properties
       - name: Upload key from secrets
         env:
           KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
