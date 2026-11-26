@@ -32,6 +32,20 @@ android {
         buildConfigField("String", "FIREBASE_APP_ID", "\"${prop("partpoint.firebase.appId.delivery")}\"")
     }
 
+    // Upload key for Play App Signing. Supplied by CI from secrets (never committed); without it,
+    // release builds are produced unsigned. Same key for both apps is fine; Google re-signs for users.
+    val keystore = providers.gradleProperty("partpoint.signing.storeFile").orElse(providers.environmentVariable("PARTPOINT_KEYSTORE")).orNull
+    signingConfigs {
+        if (keystore != null) {
+            create("upload") {
+                storeFile = file(keystore)
+                storePassword = providers.environmentVariable("PARTPOINT_KEYSTORE_PASSWORD").orNull
+                keyAlias = providers.environmentVariable("PARTPOINT_KEY_ALIAS").orNull
+                keyPassword = providers.environmentVariable("PARTPOINT_KEY_PASSWORD").orNull
+            }
+        }
+    }
+
     buildTypes {
         debug {
             applicationIdSuffix = ".debug" // installs next to the release app
@@ -39,6 +53,7 @@ android {
         }
         release {
             isMinifyEnabled = true // R8: shrink + obfuscate
+            if (keystore != null) signingConfig = signingConfigs.getByName("upload")
             isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
             buildConfigField("String", "API_BASE_URL", "\"${providers.gradleProperty("partpoint.apiBaseUrl").get()}\"")

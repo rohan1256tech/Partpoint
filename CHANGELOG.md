@@ -191,6 +191,10 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   grievance officer and privacy email come from new settings (LEGAL_NAME, LEGAL_ADDRESS, GRIEVANCE_OFFICER,
   PRIVACY_EMAIL), required in production; missing ones are visibly flagged in development. Linked from the
   signup consent (both apps) and every Account screen. Deletion page now says "Account → Delete account".
+- Android release builds: optional upload-key signing from CI secrets (unsigned without a key); R8 builds
+  verified (about 2.2–2.6 MB, all serializers kept). CI `release` job on main builds both signed AABs, keeps
+  them with the R8 mapping files, and can publish to Play internal testing (switched off by variables until
+  the Play account exists).
 
 ### Fixed
 - Blank values in `.env` (e.g. `DEMO_OTP=`) stopped the API from starting; they now mean "not set".
