@@ -11,8 +11,9 @@ interface Deps {
 
 /** Mounted at /v1. The signed-in user's own account. */
 export const meRoutes: FastifyPluginAsync<Deps> = async (app, { users, authenticate }) => {
-  // Pending users may see their own profile (to show "awaiting approval").
-  app.get('/me', { preHandler: authenticate({ allowPending: true }) }, async (req) => {
+  // Pending users may see their own profile (to show "awaiting approval"), and an admin who has
+  // not set up 2FA yet may too: the panel needs it to show the 2FA setup screen.
+  app.get('/me', { preHandler: authenticate({ allowPending: true, allowWithoutMfa: true }) }, async (req) => {
     return users.getWithProfile(currentUser(req).id);
   });
 };
