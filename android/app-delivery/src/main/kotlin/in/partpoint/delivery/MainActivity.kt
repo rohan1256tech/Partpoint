@@ -69,7 +69,7 @@ private fun Root(vm: SessionViewModel = hiltViewModel()) {
     when (val s = session) {
         Session.Loading -> LoadingScreen()
         is Session.SignedOut -> SignedOutFlow(s.notice)
-        is Session.Active -> if (s.me.isApproved) HomeScreen(s.me) else PendingApprovalScreen(s.me)
+        is Session.Active -> if (s.me.isApproved) RiderApp(s.me) else PendingApprovalScreen(s.me)
     }
 }
 
@@ -140,16 +140,5 @@ private fun RiderSignupScreen(phone: String, token: String, onBack: () -> Unit, 
             }
         })
         TextButton(onClick = onBack) { Text("Back") }
-    }
-}
-
-/** Placeholder until the job list, pickup and delivery-code screens land (delivery slice). */
-@Composable
-private fun HomeScreen(me: Me) {
-    ScreenColumn {
-        Spacer(Modifier.height(24.dp))
-        Text("Hi, ${me.name.substringBefore(' ')}", style = MaterialTheme.typography.headlineMedium)
-        Text("Your delivery partner account is active.", style = MaterialTheme.typography.bodyLarge)
-        AccountActions()
     }
 }

@@ -224,16 +224,14 @@ The goal is approval on the first submission. Every item below is part of the de
 ### Permissions
 - [ ] **No `READ_SMS`.** OTP auto-fill uses the SMS Retriever / User Consent API.
 - [ ] **No `READ_MEDIA_IMAGES`.** Product photos are chosen through the Android Photo Picker.
-- [ ] Location **only in the Delivery app**: while-in-use permission plus a `location`-type foreground service during an active delivery, with a prominent in-app disclosure before the request.
-- [ ] **No `ACCESS_BACKGROUND_LOCATION`.**
-- [ ] Foreground service declaration and demo video submitted (Delivery app).
+- [x] **No location permission in v1, in either app.** The Delivery app hands the pickup and drop address to Google Maps for directions; Maps uses its own permission. This removes the location disclosure, foreground-service declaration and demo video from the Play review. (Phase 2 live tracking would add a while-in-use permission with a `location` foreground service and a prominent disclosure; never `ACCESS_BACKGROUND_LOCATION`.)
 - [ ] Notification permission requested in context, not at first launch.
 
 ### Play Console declarations
 - [ ] **App access:** working demo accounts for **every role**, using test numbers with a fixed OTP, pre-approved.
 - [ ] **Account deletion:** an in-app option plus a public web URL.
 - [ ] **Privacy policy:** hosted on our domain and linked in the app; matches the Data safety form.
-- [ ] **Data safety form:** accurate for each app (location declared only for Delivery).
+- [ ] **Data safety form:** accurate for each app (no location collected in v1).
 - [ ] **User-generated content:** "Report review" in the app and moderation in the admin panel.
 - [ ] Target audience 18+; content rating questionnaire; ads declaration (none); financial features declaration (none in v1).
 - [ ] Store listing uses real screenshots and an accurate description, with no third-party brand names or keyword stuffing.

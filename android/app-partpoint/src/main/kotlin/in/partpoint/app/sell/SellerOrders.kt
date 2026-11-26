@@ -1,5 +1,7 @@
 package `in`.partpoint.app.sell
 
+import `in`.partpoint.core.ui.Load
+import `in`.partpoint.core.ui.LoadingViewModel
 import android.content.ActivityNotFoundException
 import android.content.Context
 import android.net.Uri
@@ -66,8 +68,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
-import `in`.partpoint.app.shop.Load
-import `in`.partpoint.app.shop.LoadingViewModel
 import `in`.partpoint.app.shop.MoneyRow
 import `in`.partpoint.app.shop.OrderDetail
 import `in`.partpoint.app.shop.OrderSummary

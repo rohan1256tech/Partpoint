@@ -1,11 +1,22 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  Partpoint Delivery (delivery partners only). Location permissions are added in the delivery
-  slice, foreground-only, for navigation to pickup and drop addresses.
+  Partpoint Delivery (delivery partners only). No location permission: navigation hands the
+  address to Google Maps, which uses its own permission. Continuous GPS tracking is Phase 2.
 -->
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
     <uses-permission android:name="android.permission.INTERNET" />
+
+    <!-- Android 11+: find a maps app/browser for directions and the dialer for calls. -->
+    <queries>
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="https" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.DIAL" />
+        </intent>
+    </queries>
 
     <application
         android:name=".DeliveryApp"

@@ -22,6 +22,8 @@ dependencies {
     api(libs.compose.material3)
     api(libs.compose.material.icons)
     api(libs.compose.ui.tooling.preview)
+    api(project(":core:network"))
+    api(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.androidx.activity.compose)
     api(libs.coil.compose)
     implementation(libs.coil.network.okhttp)

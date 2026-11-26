@@ -1,5 +1,7 @@
 package `in`.partpoint.app.shop
 
+import `in`.partpoint.core.ui.Load
+import `in`.partpoint.core.ui.LoadingViewModel
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column

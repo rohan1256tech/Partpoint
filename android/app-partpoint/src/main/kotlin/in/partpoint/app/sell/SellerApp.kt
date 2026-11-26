@@ -1,5 +1,7 @@
 package `in`.partpoint.app.sell
 
+import `in`.partpoint.core.ui.Load
+import `in`.partpoint.core.ui.LoadingViewModel
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -46,8 +48,6 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import dagger.hilt.android.lifecycle.HiltViewModel
-import `in`.partpoint.app.shop.Load
-import `in`.partpoint.app.shop.LoadingViewModel
 import `in`.partpoint.core.auth.Me
 import `in`.partpoint.core.auth.PhoneNumber
 import `in`.partpoint.core.auth.ui.AccountActions

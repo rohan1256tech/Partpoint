@@ -1,5 +1,7 @@
 package `in`.partpoint.app.shop
 
+import `in`.partpoint.core.ui.Load
+import `in`.partpoint.core.ui.LoadingViewModel
 import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.Intent

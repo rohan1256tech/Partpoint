@@ -167,6 +167,12 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   converted to WebP (1600 px, 1 MB, metadata stripped) and uploaded straight to storage. Pricing problems
   are shown in plain words before saving, matching the server rules. Earnings: balance owed, breakdown,
   this month's orders and earnings, top sellers, payouts received.
+- Partpoint Delivery app (Jobs, Earnings, Account tabs): online/offline switch; job list with new offers
+  first; guided job screen (accept or decline with reason, go to pickup with an item checklist, picked up,
+  start delivery, enter the retailer's 4-digit code with screenshot protection); pickup and drop cards with
+  Google Maps two-wheeler directions and call buttons; earnings (today, 7 days, month, all time, unpaid)
+  and recent deliveries. No location permission: directions are handed to Maps (README Play checklist
+  updated). Shared loading helper moved to core:ui.
 
 ### Fixed
 - Blank values in `.env` (e.g. `DEMO_OTP=`) stopped the API from starting; they now mean "not set".
