@@ -19,6 +19,7 @@ import {
   wholesalerInvoiceRoutes,
 } from './modules/invoices/invoices.js';
 import { AccountService, accountRoutes, adminAccountRoutes, publicAccountRoutes } from './modules/account/account.js';
+import { privacyPage } from './modules/account/privacy-page.js';
 import { adminFinanceRoutes, FinanceService, wholesalerFinanceRoutes } from './modules/finance/finance.js';
 import { AnnouncementService, adminAnnouncementRoutes } from './modules/announcements/announcements.js';
 import { adminMarketingRoutes, bannerRoutes, MarketingService } from './modules/marketing/marketing.js';
@@ -212,7 +213,16 @@ export async function buildApp({ env, db, checks, messaging, storage, push }: Ap
 
   const closing = { account: new AccountService(db, finance), authenticate };
   await app.register(accountRoutes, { prefix: '/v1/me', ...closing });
-  await app.register(publicAccountRoutes, closing);
+  await app.register(publicAccountRoutes, {
+    ...closing,
+    privacyHtml: privacyPage({
+      legalName: env.LEGAL_NAME,
+      legalAddress: env.LEGAL_ADDRESS,
+      grievanceOfficer: env.GRIEVANCE_OFFICER,
+      privacyEmail: env.PRIVACY_EMAIL,
+      version: env.CONSENT_VERSION,
+    }),
+  });
   await app.register(adminAccountRoutes, { prefix: '/v1/admin/account-deletion-requests', ...closing });
 
   const billing = { invoices: new InvoicesService(db), authenticate };

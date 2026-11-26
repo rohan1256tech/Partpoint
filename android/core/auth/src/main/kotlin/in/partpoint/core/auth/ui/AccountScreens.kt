@@ -97,6 +97,7 @@ fun AccountActions(vm: SessionViewModel = hiltViewModel()) {
     val busy by vm.busy.collectAsStateWithLifecycle()
 
     OutlinedButton(onClick = vm::signOut, enabled = !busy, modifier = Modifier.fillMaxWidth()) { Text("Sign out") }
+    PrivacyPolicyButton(Modifier.fillMaxWidth())
     TextButton(onClick = { confirmDelete = true }, enabled = !busy, modifier = Modifier.fillMaxWidth()) {
         Text("Delete account", color = MaterialTheme.colorScheme.error)
     }

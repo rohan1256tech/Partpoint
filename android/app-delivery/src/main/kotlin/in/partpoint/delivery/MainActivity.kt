@@ -38,6 +38,7 @@ import `in`.partpoint.core.auth.PhoneNumber
 import `in`.partpoint.core.auth.Session
 import `in`.partpoint.core.auth.SignupProfile
 import `in`.partpoint.core.auth.ui.AccountActions
+import `in`.partpoint.core.auth.ui.ConsentText
 import `in`.partpoint.core.auth.ui.LoginScreen
 import `in`.partpoint.core.auth.ui.PendingApprovalScreen
 import `in`.partpoint.core.auth.ui.SessionViewModel
@@ -126,10 +127,10 @@ private fun RiderSignupScreen(phone: String, token: String, onBack: () -> Unit, 
         OutlinedTextField(vehicleNumber, { vehicleNumber = it.uppercase().take(15) }, label = { Text("Vehicle number (optional)") }, singleLine = true,
             keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Characters), modifier = Modifier.fillMaxWidth())
         Text(
-            "By joining you agree to the Partpoint privacy policy and terms. Your phone number is shared with the " +
-                "shop and wholesaler of each order you deliver.",
+            "Your phone number is shared with the shop and the wholesaler of each order you deliver, so they can reach you.",
             style = MaterialTheme.typography.bodySmall,
         )
+        ConsentText(prefix = "By joining you agree to the Partpoint ")
         ErrorText(error)
         PrimaryButton("Join", enabled = name.isNotBlank(), loading = busy, onClick = {
             scope.launch {

@@ -186,6 +186,11 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   same business details, verified by an emailed 6-digit code), and forgot password (code by email, new
   password, other sessions signed out). An unverified email at sign-in sends a fresh code and opens the
   code screen. The Delivery app stays phone-only, since riders must be reachable by phone.
+- Public privacy policy at `/privacy` (DPDP Act 2023 notice, Play policy URL): what is collected and why, who
+  sees it, retention (GST records ~8 years), protection, rights, grievance officer. Business name, address,
+  grievance officer and privacy email come from new settings (LEGAL_NAME, LEGAL_ADDRESS, GRIEVANCE_OFFICER,
+  PRIVACY_EMAIL), required in production; missing ones are visibly flagged in development. Linked from the
+  signup consent (both apps) and every Account screen. Deletion page now says "Account → Delete account".
 
 ### Fixed
 - Blank values in `.env` (e.g. `DEMO_OTP=`) stopped the API from starting; they now mean "not set".

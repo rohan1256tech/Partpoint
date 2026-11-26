@@ -38,6 +38,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import `in`.partpoint.core.auth.AuthRepository
 import `in`.partpoint.core.auth.PhoneNumber
 import `in`.partpoint.core.auth.SignupProfile
+import `in`.partpoint.core.auth.ui.ConsentText
 import `in`.partpoint.core.auth.ui.EmailField
 import `in`.partpoint.core.auth.ui.PasswordField
 import `in`.partpoint.core.auth.ui.looksLikeEmail
@@ -161,7 +162,7 @@ fun SignupScreen(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Checkbox(checked = consent, onCheckedChange = null)
-                Text("I agree to the Partpoint privacy policy and terms.", style = MaterialTheme.typography.bodyMedium)
+                ConsentText()
             }
 
             ErrorText(error)

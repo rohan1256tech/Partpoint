@@ -29,7 +29,7 @@ export const deletionPage = `<!doctype html>
 <main>
   <h1>Delete your Partpoint account</h1>
   <p>This page is for the <strong>Partpoint</strong> and <strong>Partpoint Delivery</strong> apps.
-     The quickest way is in the app: <em>Profile → Delete account</em>. You can also ask us here.</p>
+     The quickest way is in the app: <em>Account → Delete account</em>. You can also ask us here.</p>
 
   <h2>What is deleted</h2>
   <ul>

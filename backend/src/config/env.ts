@@ -53,6 +53,12 @@ const EnvSchema = z
 
     /** Firebase service-account JSON (raw or base64). Optional in development: pushes are logged instead. */
     FIREBASE_SERVICE_ACCOUNT: z.string().optional(),
+
+    // Shown on the public privacy policy (DPDP Act: who is responsible and whom to contact).
+    LEGAL_NAME: z.string().trim().min(2).max(200).optional(),
+    LEGAL_ADDRESS: z.string().trim().min(5).max(500).optional(),
+    GRIEVANCE_OFFICER: z.string().trim().min(2).max(100).optional(),
+    PRIVACY_EMAIL: z.email().optional(),
   })
   .superRefine((env, ctx) => {
     if (env.DEMO_PHONES.length > 0 && !env.DEMO_OTP) {
@@ -78,6 +84,10 @@ const EnvSchema = z
         'R2_BUCKET_NAME',
         'R2_PUBLIC_URL',
         'FIREBASE_SERVICE_ACCOUNT',
+        'LEGAL_NAME',
+        'LEGAL_ADDRESS',
+        'GRIEVANCE_OFFICER',
+        'PRIVACY_EMAIL',
       ] as const) {
         if (!env[key]) ctx.addIssue({ code: 'custom', path: [key], message: 'required in production' });
       }

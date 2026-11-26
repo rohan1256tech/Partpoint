@@ -232,7 +232,15 @@ export const accountRoutes: FastifyPluginAsync<Deps> = async (app, { account, au
 };
 
 /** Public: the web page and form linked from the Play Store listing. */
-export const publicAccountRoutes: FastifyPluginAsync<Deps> = async (app, { account }) => {
+export const publicAccountRoutes: FastifyPluginAsync<Deps & { privacyHtml: string }> = async (app, { account, privacyHtml }) => {
+  // Linked from the Play listing, the Data safety form, the signup consent and the apps' Account screen.
+  app.get('/privacy', async (_req, reply) =>
+    reply
+      .header('content-type', 'text/html; charset=utf-8')
+      .header('content-security-policy', "default-src 'none'; style-src 'unsafe-inline'")
+      .header('cache-control', 'public, max-age=3600')
+      .send(privacyHtml),
+  );
   app.get('/account/delete', async (_req, reply) =>
     reply
       .header('content-type', 'text/html; charset=utf-8')
