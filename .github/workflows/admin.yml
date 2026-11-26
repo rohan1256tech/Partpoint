@@ -1,0 +1,55 @@
+name: admin
+
+on:
+  push:
+    paths: ['admin/**', '.github/workflows/admin.yml']
+  pull_request:
+    paths: ['admin/**', '.github/workflows/admin.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: admin-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    working-directory: admin
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: corepack enable
+      - name: Locate pnpm store
+        id: pnpm
+        run: echo "store=$(pnpm store path --silent)" >> "$GITHUB_OUTPUT"
+      - name: Cache pnpm store
+        uses: actions/cache@v4
+        with:
+          path: ${{ steps.pnpm.outputs.store }}
+          key: pnpm-admin-${{ runner.os }}-${{ hashFiles('admin/pnpm-lock.yaml') }}
+          restore-keys: pnpm-admin-${{ runner.os }}-
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm typecheck
+      - run: pnpm lint
+      - run: pnpm test
+      - name: Build
+        run: pnpm build
+        env:
+          # The production API origin, e.g. https://api.example.in (repository variable).
+          VITE_API_URL: ${{ vars.ADMIN_API_URL }}
+      - name: Keep the build
+        if: github.event_name == 'push'
+        uses: actions/upload-artifact@v4
+        with:
+          name: admin-dist-${{ github.sha }}
+          path: admin/dist
+          retention-days: 14

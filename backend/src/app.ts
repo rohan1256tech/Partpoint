@@ -1,4 +1,5 @@
 import Fastify, { type FastifyError, type FastifyInstance } from 'fastify';
+import cookie from '@fastify/cookie';
 import cors from '@fastify/cors';
 import helmet from '@fastify/helmet';
 import rateLimit from '@fastify/rate-limit';
@@ -83,6 +84,7 @@ export async function buildApp({ env, db, checks, messaging, storage, push }: Ap
   });
 
   await app.register(helmet, { contentSecurityPolicy: false });
+  await app.register(cookie);
   await app.register(cors, { origin: env.CORS_ORIGINS, credentials: true });
   await app.register(rateLimit, {
     max: 300,
@@ -141,7 +143,12 @@ export async function buildApp({ env, db, checks, messaging, storage, push }: Ap
   };
 
   await app.register(healthRoutes, { checks });
-  await app.register(authRoutes, { prefix: '/v1/auth', auth });
+  await app.register(authRoutes, {
+    prefix: '/v1/auth',
+    auth,
+    secureCookies: env.NODE_ENV === 'production',
+    refreshTtlDays: env.REFRESH_TOKEN_TTL_DAYS,
+  });
   await app.register(meRoutes, { prefix: '/v1', users, authenticate });
   await app.register(adminUserRoutes, { prefix: '/v1/admin/users', users, authenticate });
   await app.register(adminMfaRoutes, {

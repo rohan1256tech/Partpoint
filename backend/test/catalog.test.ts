@@ -404,6 +404,8 @@ describe('admin moderation', () => {
     expect(objectKey).toMatch(/^categories\/[0-9a-f-]{36}\.webp$/);
     const cat = await http.patch(`/v1/admin/categories/${catId}`, admin, { imageKey: objectKey });
     expect(cat.json().imageKey).toBe(objectKey);
+    const listed = (await http.get('/v1/admin/categories', admin)).json().items.find((c: { id: string }) => c.id === catId);
+    expect(listed.imageUrl).toBe(`https://img.test/${objectKey}`);
     expect((await http.patch(`/v1/admin/categories/${catId}`, admin, { imageKey: 'products/x.webp' })).statusCode).toBe(400);
   });
 });

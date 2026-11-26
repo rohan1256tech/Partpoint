@@ -1,0 +1,38 @@
+.wrap {
+  position: relative;
+  width: 100%;
+}
+
+.grid {
+  stroke: light-dark(var(--mantine-color-gray-2), var(--mantine-color-dark-4));
+  stroke-width: 1;
+}
+
+.tick {
+  font-size: 11px;
+  fill: var(--mantine-color-dimmed);
+  font-variant-numeric: tabular-nums;
+}
+
+rect[tabindex]:focus-visible {
+  outline: 2px solid var(--mantine-primary-color-filled);
+  outline-offset: -2px;
+}
+
+.tooltip {
+  position: absolute;
+  transform: translate(-50%, -100%);
+  pointer-events: none;
+  padding: 6px 8px;
+  border-radius: 6px;
+  background: var(--mantine-color-body);
+  border: 1px solid light-dark(var(--mantine-color-gray-3), var(--mantine-color-dark-4));
+  box-shadow: var(--mantine-shadow-sm);
+  white-space: nowrap;
+}
+
+.table summary {
+  cursor: pointer;
+  font-size: var(--mantine-font-size-xs);
+  color: var(--mantine-color-dimmed);
+}

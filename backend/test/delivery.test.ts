@@ -183,6 +183,8 @@ describe('delivery flow', () => {
     expect(locked.statusCode).toBe(429);
     expect(locked.json().code).toBe('DELIVERY_OTP_LOCKED');
 
+    expect((await http.get(`/v1/admin/orders/${id}`, admin)).json().deliveryOtpAttempts).toBe(5);
+    expect((await http.get(`/v1/orders/${id}`, retailer.token)).json().deliveryOtpAttempts).toBeNull();
     await http.post(`/v1/admin/orders/${id}/reset-delivery-otp`, admin);
     expect((await http.post(`/v1/delivery/orders/${id}/deliver`, rider.token, { otp: code })).json().status).toBe('delivered');
   });

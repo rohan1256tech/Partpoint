@@ -160,8 +160,9 @@ export class MarketingService {
     return items;
   }
 
-  listBanners(): Promise<BannerRow[]> {
-    return this.db.select().from(banners).orderBy(asc(banners.sortOrder), desc(banners.createdAt));
+  async listBanners(): Promise<(BannerRow & { imageUrl: string })[]> {
+    const rows = await this.db.select().from(banners).orderBy(asc(banners.sortOrder), desc(banners.createdAt));
+    return rows.map((b) => ({ ...b, imageUrl: this.storage.publicUrl(b.imageKey) }));
   }
 
   async createBanner(adminId: string, input: z.infer<typeof bannerCreate>, ip: string): Promise<BannerRow> {

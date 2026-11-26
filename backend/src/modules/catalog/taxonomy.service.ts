@@ -82,12 +82,15 @@ export class TaxonomyService {
 
   // ---------------------------------------------------------------- admin
 
-  listAllCategories(): Promise<CategoryRow[]> {
-    return this.db.select().from(categories).orderBy(asc(categories.sortOrder), asc(categories.name));
+  /** Every category, active or not, with a viewable image URL for the admin panel. */
+  async listAllCategories(): Promise<(CategoryRow & { imageUrl: string | null })[]> {
+    const rows = await this.db.select().from(categories).orderBy(asc(categories.sortOrder), asc(categories.name));
+    return rows.map((c) => ({ ...c, imageUrl: c.imageKey ? this.storage.publicUrl(c.imageKey) : null }));
   }
 
-  listAllBrands(): Promise<BrandRow[]> {
-    return this.db.select().from(brands).orderBy(asc(brands.name));
+  async listAllBrands(): Promise<(BrandRow & { logoUrl: string | null })[]> {
+    const rows = await this.db.select().from(brands).orderBy(asc(brands.name));
+    return rows.map((b) => ({ ...b, logoUrl: b.logoKey ? this.storage.publicUrl(b.logoKey) : null }));
   }
 
   async createCategory(adminId: string, input: z.infer<typeof categoryCreate>, ip: string): Promise<CategoryRow> {
