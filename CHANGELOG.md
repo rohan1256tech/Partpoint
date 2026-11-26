@@ -179,6 +179,9 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   registered after sign-in and removed at sign-out/account deletion. Tapping a notification opens that
   order or job; open lists and detail screens refresh when a push arrives. Notification permission
   (Android 13+) is asked in context on each app's main work screen, once, with a reason.
+- Admin announcements: push a short title and message to approved retailers, wholesalers, delivery
+  partners or everyone, with a phone-style preview and a confirmation (pushes can't be recalled). History
+  with accounts and devices reached; kept in the audit log. Max 10 per hour.
 
 ### Fixed
 - Blank values in `.env` (e.g. `DEMO_OTP=`) stopped the API from starting; they now mean "not set".

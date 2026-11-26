@@ -20,6 +20,7 @@ import {
 } from './modules/invoices/invoices.js';
 import { AccountService, accountRoutes, adminAccountRoutes, publicAccountRoutes } from './modules/account/account.js';
 import { adminFinanceRoutes, FinanceService, wholesalerFinanceRoutes } from './modules/finance/finance.js';
+import { AnnouncementService, adminAnnouncementRoutes } from './modules/announcements/announcements.js';
 import { adminMarketingRoutes, bannerRoutes, MarketingService } from './modules/marketing/marketing.js';
 import { adminReportRoutes, ReportsService, wholesalerReportRoutes } from './modules/reports/reports.js';
 import { adminReviewRoutes, reviewRoutes, ReviewsService } from './modules/reviews/reviews.js';
@@ -194,6 +195,11 @@ export async function buildApp({ env, db, checks, messaging, storage, push }: Ap
   const marketing = { marketing: new MarketingService(db, images), authenticate };
   await app.register(bannerRoutes, { prefix: '/v1', ...marketing });
   await app.register(adminMarketingRoutes, { prefix: '/v1/admin', ...marketing });
+  await app.register(adminAnnouncementRoutes, {
+    prefix: '/v1/admin/announcements',
+    announcements: new AnnouncementService(db, notifications),
+    authenticate,
+  });
 
   const moderation = { reviews: new ReviewsService(db, catalog.products), authenticate };
   await app.register(reviewRoutes, { prefix: '/v1', ...moderation });

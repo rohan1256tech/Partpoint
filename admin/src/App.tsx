@@ -17,6 +17,7 @@ const DeliveryPartnersPage = lazy(() =>
 );
 const CouponsPage = lazy(() => import('./pages/marketing/CouponsPage').then((m) => ({ default: m.CouponsPage })));
 const BannersPage = lazy(() => import('./pages/marketing/BannersPage').then((m) => ({ default: m.BannersPage })));
+const AnnouncementsPage = lazy(() => import('./pages/marketing/AnnouncementsPage').then((m) => ({ default: m.AnnouncementsPage })));
 const ReviewsPage = lazy(() => import('./pages/marketing/ReviewsPage').then((m) => ({ default: m.ReviewsPage })));
 const FinancePage = lazy(() => import('./pages/money/FinancePage').then((m) => ({ default: m.FinancePage })));
 const ReportsPage = lazy(() => import('./pages/money/ReportsPage').then((m) => ({ default: m.ReportsPage })));
@@ -52,6 +53,7 @@ export function App() {
             <Route path="marketing/coupons" element={<CouponsPage />} />
             <Route path="marketing/banners" element={<BannersPage />} />
             <Route path="marketing/reviews" element={<ReviewsPage />} />
+            <Route path="marketing/announcements" element={<AnnouncementsPage />} />
             <Route path="finance" element={<FinancePage />} />
             <Route path="reports" element={<ReportsPage />} />
             <Route path="settings" element={<SettingsPage />} />

@@ -12,6 +12,7 @@ import {
   IconReceipt,
   IconReportAnalytics,
   IconSettings,
+  IconSpeakerphone,
   IconStar,
   IconSun,
   IconTag,
@@ -50,6 +51,7 @@ const NAV = [
       { to: '/marketing/coupons', label: 'Coupons', icon: IconTicket },
       { to: '/marketing/banners', label: 'Banners', icon: IconPhoto },
       { to: '/marketing/reviews', label: 'Reviews', icon: IconStar },
+      { to: '/marketing/announcements', label: 'Announcements', icon: IconSpeakerphone },
     ],
   },
   {
