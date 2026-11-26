@@ -36,32 +36,25 @@ On a real phone over USB: `adb reverse tcp:80 tcp:80` and set `partpoint.debugAp
 Release builds use R8 (shrunk and obfuscated; about 2.5 MB per app) and HTTPS only.
 
 1. **Upload key** (once, kept by the client, never committed):
-   keytool error: java.lang.NumberFormatException: For input string: "9125"
-java.lang.NumberFormatException: For input string: "9125"
-	at java.base/java.lang.NumberFormatException.forInputString(NumberFormatException.java:67)
-	at java.base/java.lang.Long.parseLong(Long.java:711)
-	at java.base/java.lang.Long.parseLong(Long.java:836)
-	at java.base/sun.security.tools.keytool.Main.parseArgs(Main.java:625)
-	at java.base/sun.security.tools.keytool.Main.run(Main.java:419)
-	at java.base/sun.security.tools.keytool.Main.main(Main.java:414)
+   `keytool -genkeypair -v -keystore upload.jks -alias upload -keyalg RSA -keysize 4096 -validity 9125`
    Enrol in **Play App Signing**: Google holds the app signing key; this upload key can be reset if lost.
-2. **GitHub secrets**:  (), ,
-   , ; for automatic upload also .
-3. **GitHub variables**: , , the five  values, then
-    (and  once both apps exist in Play Console; the very first
-   upload of each app must be done by hand).
-4. Every push to  then builds both signed AABs (downloadable from the workflow run with the R8 mapping
+2. **GitHub secrets**: `ANDROID_KEYSTORE_BASE64` (output of `base64 -w0 upload.jks`), `ANDROID_KEYSTORE_PASSWORD`,
+   `ANDROID_KEY_ALIAS`, `ANDROID_KEY_PASSWORD`; for automatic upload also `PLAY_SERVICE_ACCOUNT_JSON`.
+3. **GitHub variables**: `ANDROID_API_BASE_URL`, `ANDROID_APP_ID_PREFIX`, the five `FIREBASE_*` values, then
+   `ANDROID_RELEASE_ENABLED=true` (and `PLAY_UPLOAD_ENABLED=true` once both apps exist in Play Console; the very
+   first upload of each app must be done by hand).
+4. Every push to `main` then builds both signed AABs (downloadable from the workflow run, with the R8 mapping
    files) and, if enabled, publishes them to the **internal testing** track.
 
-Locally:  with the passwords in
-, , . Without a key the release
-build is produced unsigned.
+Locally: `./gradlew bundleRelease -Ppartpoint.signing.storeFile=/path/to/upload.jks` with the passwords in the
+environment variables `PARTPOINT_KEYSTORE_PASSWORD`, `PARTPOINT_KEY_ALIAS` and `PARTPOINT_KEY_PASSWORD`.
+Without a key the release build is produced unsigned.
 
 ## Push notifications
 
-Create one Firebase project, add both Android apps (their final application IDs), and copy the project ID,
-web API key, sender ID and each app ID into  (or the CI variables). On the server, set
-. With values missing, the apps run normally without push.
+Create one Firebase project, add both Android apps (with their final application IDs), and copy the project ID,
+web API key, sender ID and each app ID into `gradle.properties` (or the CI variables). On the server, set
+`FIREBASE_SERVICE_ACCOUNT`. With values missing, the apps run normally without push.
 
 ## Security
 
