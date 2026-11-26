@@ -119,6 +119,19 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   riders, unlocking a locked delivery code, and cancellation with a reason. Delivery partners page with
   availability and active deliveries. Admin order detail now reports wrong delivery-code attempts.
 - Backend tests: per-test setup timeout raised to 30 s (setup could exceed 10 s on a busy machine).
+- Admin panel, remaining sections (navigation now grouped: Operations, Catalog, Marketing, Money,
+  Administration):
+  - Coupons: create/edit (percent with cap, or flat; minimum order; total and per-retailer limits; validity
+    window), live/scheduled/expired/used-up state, use counts.
+  - Banners: image, link to a category, brand or product, display order, date window, delete.
+  - Reviews: reported queue with reasons, hide / show again / dismiss reports.
+  - Finance: wholesaler balances with payout recording (amount ≤ balance, bank reference, date) and history;
+    rider earnings settlement with a transfer reference.
+  - Reports: orders CSV for an IST date range (≤ 366 days).
+  - Settings: commission, delivery fee, rider earning per delivery, minimum order; amounts entered in rupees
+    and percent, stored as paise and basis points.
+  - Account deletions: process web-form requests (complete or reject with note), history of in-app ones.
+- Admin banner list now includes image URLs.
 
 ### Fixed
 - Blank values in `.env` (e.g. `DEMO_OTP=`) stopped the API from starting; they now mean "not set".

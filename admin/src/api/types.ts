@@ -197,3 +197,95 @@ export interface DeliveryPartner {
   isAvailable: boolean;
   activeDeliveries: number;
 }
+
+// ---------------------------------------------------------------- marketing, reviews, money, settings
+
+export interface Coupon {
+  id: string;
+  code: string;
+  description: string | null;
+  discountType: 'percent' | 'flat';
+  /** Basis points for percent, paise for flat. */
+  discountValue: number;
+  maxDiscountPaise: number | null;
+  minOrderPaise: number;
+  usageLimit: number | null;
+  perUserLimit: number;
+  startsAt: string | null;
+  endsAt: string | null;
+  isActive: boolean;
+  timesUsed: number;
+}
+
+export type BannerLink = 'none' | 'category' | 'product' | 'brand';
+export interface Banner {
+  id: string;
+  title: string;
+  imageKey: string;
+  imageUrl: string;
+  linkType: BannerLink;
+  linkValue: string | null;
+  sortOrder: number;
+  isActive: boolean;
+  startsAt: string | null;
+  endsAt: string | null;
+}
+
+export interface AdminReview {
+  id: string;
+  productId: string;
+  productName: string;
+  orderId: string;
+  reviewer: string;
+  rating: number;
+  comment: string | null;
+  status: 'visible' | 'hidden';
+  openReports: number;
+  reportReasons: string[];
+  createdAt: string;
+}
+
+export interface WholesalerBalance {
+  wholesalerId: string;
+  businessName: string;
+  deliveredOrders: number;
+  goodsPaise: number;
+  commissionPaise: number;
+  owedPaise: number;
+  paidPaise: number;
+  balancePaise: number;
+}
+
+export interface Payout {
+  id: string;
+  amountPaise: number;
+  reference: string | null;
+  note: string | null;
+  paidAt: string;
+}
+
+export interface RiderBalance {
+  partnerId: string;
+  name: string;
+  unpaidPaise: number;
+  unpaidDeliveries: number;
+}
+
+export interface PlatformSettings {
+  commissionBps: number;
+  deliveryFeePaise: number;
+  minOrderPaise: number;
+  deliveryEarningPaise: number;
+}
+
+export interface DeletionRequest {
+  id: string;
+  userId: string | null;
+  source: 'app' | 'web' | string;
+  contact: string;
+  reason: string | null;
+  status: 'requested' | 'completed' | 'rejected';
+  note: string | null;
+  processedAt: string | null;
+  createdAt: string;
+}

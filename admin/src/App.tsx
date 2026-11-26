@@ -15,6 +15,13 @@ const OrdersPage = lazy(() => import('./pages/orders/OrdersPage').then((m) => ({
 const DeliveryPartnersPage = lazy(() =>
   import('./pages/delivery/DeliveryPartnersPage').then((m) => ({ default: m.DeliveryPartnersPage })),
 );
+const CouponsPage = lazy(() => import('./pages/marketing/CouponsPage').then((m) => ({ default: m.CouponsPage })));
+const BannersPage = lazy(() => import('./pages/marketing/BannersPage').then((m) => ({ default: m.BannersPage })));
+const ReviewsPage = lazy(() => import('./pages/marketing/ReviewsPage').then((m) => ({ default: m.ReviewsPage })));
+const FinancePage = lazy(() => import('./pages/money/FinancePage').then((m) => ({ default: m.FinancePage })));
+const ReportsPage = lazy(() => import('./pages/money/ReportsPage').then((m) => ({ default: m.ReportsPage })));
+const SettingsPage = lazy(() => import('./pages/admin/SettingsPage').then((m) => ({ default: m.SettingsPage })));
+const DeletionRequestsPage = lazy(() => import('./pages/admin/DeletionRequestsPage').then((m) => ({ default: m.DeletionRequestsPage })));
 const ProductsPage = lazy(() => import('./pages/catalog/ProductsPage').then((m) => ({ default: m.ProductsPage })));
 
 const Spinner = () => (
@@ -42,6 +49,13 @@ export function App() {
             <Route path="catalog/categories" element={<CategoriesPage />} />
             <Route path="catalog/brands" element={<BrandsPage />} />
             <Route path="catalog/products" element={<ProductsPage />} />
+            <Route path="marketing/coupons" element={<CouponsPage />} />
+            <Route path="marketing/banners" element={<BannersPage />} />
+            <Route path="marketing/reviews" element={<ReviewsPage />} />
+            <Route path="finance" element={<FinancePage />} />
+            <Route path="reports" element={<ReportsPage />} />
+            <Route path="settings" element={<SettingsPage />} />
+            <Route path="account-deletions" element={<DeletionRequestsPage />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Route>
         </Routes>

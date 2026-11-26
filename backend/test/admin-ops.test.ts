@@ -138,7 +138,9 @@ describe('banners', () => {
     await http.patch(`/v1/admin/banners/${a.id}`, admin, { isActive: false });
     expect(await live()).toEqual(['Brakes week']);
     expect((await http.del(`/v1/admin/banners/${a.id}`, admin)).statusCode).toBe(204);
-    expect((await http.get('/v1/admin/banners', admin)).json().items).toHaveLength(3);
+    const adminList = (await http.get('/v1/admin/banners', admin)).json().items;
+    expect(adminList).toHaveLength(3);
+    expect(adminList[0].imageUrl).toBe(`https://img.test/${imageKey}`);
   });
 
   it('validates banners', async () => {
