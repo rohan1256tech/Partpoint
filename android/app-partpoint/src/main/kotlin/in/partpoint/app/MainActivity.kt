@@ -52,7 +52,8 @@ private fun Root(vm: SessionViewModel = hiltViewModel()) {
         is Session.Active -> when {
             !s.me.isApproved -> PendingApprovalScreen(s.me)
             s.me.role == "retailer" -> `in`.partpoint.app.shop.RetailerApp(s.me)
-            else -> HomeScreen(s.me) // wholesaler screens: next slice
+            s.me.role == "wholesaler" -> `in`.partpoint.app.sell.SellerApp(s.me)
+            else -> HomeScreen(s.me)
         }
     }
 }

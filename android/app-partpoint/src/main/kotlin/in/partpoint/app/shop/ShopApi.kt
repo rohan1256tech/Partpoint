@@ -36,6 +36,9 @@ data class ProductSummary(
     val thumbnailUrl: String? = null,
     val ratingAvg: Double = 0.0,
     val ratingCount: Int = 0,
+    /** draft | active | hidden | blocked (the seller sees all of them; buyers only active). */
+    val status: String = "active",
+    val statusReason: String? = null,
 )
 
 @Serializable data class Slab(val minQty: Int, val pricePaise: Long)
@@ -65,7 +68,10 @@ data class ProductDetail(
     val name: String,
     val description: String? = null,
     val partNumber: String? = null,
+    val hsnCode: String? = null,
     val gstRateBps: Int = 1800,
+    val status: String = "active",
+    val statusReason: String? = null,
     val ratingAvg: Double = 0.0,
     val ratingCount: Int = 0,
     val category: NamedRef,
@@ -164,6 +170,7 @@ data class OrderSummary(
     val totalPaise: Long,
     val itemCount: Int,
     val wholesaler: WholesalerRef,
+    val retailer: RetailerRef? = null,
     val createdAt: String,
 )
 
@@ -206,12 +213,14 @@ data class OrderDetail(
     val deliveryFeePaise: Long = 0,
     val itemCount: Int,
     val wholesaler: WholesalerRef,
+    val retailer: RetailerRef? = null,
     val address: OrderAddress,
     val items: List<OrderItem>,
     val timeline: List<TimelineEvent>,
     val cancelReason: String? = null,
     val deliveredAt: String? = null,
     val deliveryPartner: PersonRef? = null,
+    val deliveryAccepted: Boolean = false,
     /** 4-digit code the retailer gives the rider; shown once the goods are on the way. */
     val deliveryOtp: String? = null,
     val createdAt: String,

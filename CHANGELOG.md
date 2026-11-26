@@ -158,6 +158,15 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   the seller, GST invoice in the PDF viewer, star ratings after delivery. Account: addresses (add, edit,
   default, delete), wishlist, sign out, delete account. Pull-to-refresh and retry everywhere.
 - Android: Coil image loading, shared formatting (Indian digit grouping, IST), leaner Gradle memory use.
+- Partpoint app, wholesaler side (Orders, Products, Earnings, Account tabs). Orders by next task (New,
+  To pack, Ready for pickup, On the way, Done) with counts; order view with a plain next-step hint, items
+  to pack, accept, reject with a reason, mark packed, rider pickup details and the GST invoice. Products:
+  search, status filters (live, draft, hidden, blocked with reason), stock warnings; editor with category
+  and brand pickers, part number, HSN, GST rate, description, options with MRP, price, stock, minimum
+  order and up to 5 bulk prices, on/off per option, draft/publish/hide, and photos from the Photo Picker
+  converted to WebP (1600 px, 1 MB, metadata stripped) and uploaded straight to storage. Pricing problems
+  are shown in plain words before saving, matching the server rules. Earnings: balance owed, breakdown,
+  this month's orders and earnings, top sellers, payouts received.
 
 ### Fixed
 - Blank values in `.env` (e.g. `DEMO_OTP=`) stopped the API from starting; they now mean "not set".
