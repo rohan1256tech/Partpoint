@@ -26,7 +26,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0 # versionCode = commit count
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: 17
@@ -36,9 +36,15 @@ jobs:
       - name: Install SDK platform 37.1
         run: yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-37.1" > /dev/null
       - name: Unit tests
-        run: ./gradlew testDebugUnitTest
+        run: ./gradlew testDebugUnitTest --console=plain 2>&1 | tee -a "$RUNNER_TEMP/gradle.log"; exit ${PIPESTATUS[0]}
       - name: Build debug APKs
-        run: ./gradlew :app-partpoint:assembleDebug :app-delivery:assembleDebug
+        run: ./gradlew :app-partpoint:assembleDebug :app-delivery:assembleDebug --console=plain 2>&1 | tee -a "$RUNNER_TEMP/gradle.log"; exit ${PIPESTATUS[0]}
+      - name: Report the Gradle error
+        if: failure()
+        # Turn Gradle's "What went wrong" and compiler errors into annotations, readable without the full log.
+        run: |
+          grep -E "^e: |What went wrong|^> " "$RUNNER_TEMP/gradle.log" | head -n 20 | while IFS= read -r line; do echo "::error::$line"; done
+          grep -E "FAILED$|tests completed" "$RUNNER_TEMP/gradle.log" | head -n 10 | while IFS= read -r line; do echo "::error::$line"; done
       - name: Keep the APKs
         if: github.event_name == 'push'
         uses: actions/upload-artifact@v4
@@ -64,7 +70,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0 # versionCode = commit count
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: 17
