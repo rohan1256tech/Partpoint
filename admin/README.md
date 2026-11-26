@@ -25,6 +25,18 @@ to set up two-factor authentication with an authenticator app; every admin needs
   `admin.<domain>` and calls the API at `VITE_API_URL` (`api.<domain>`), which must list the panel's origin in
   the API's `CORS_ORIGINS`.
 
+## Image uploads
+
+Category images, brand logos and banners are converted to WebP (≤ 1600 px, ≤ 1 MB) **in the browser**, which
+also strips EXIF/GPS data, then uploaded straight to Cloudflare R2 with a 5-minute signed URL. The API never
+handles the bytes. Locally, without R2 credentials, uploads show "Image storage is not configured".
+
+The R2 bucket needs a CORS rule so the browser may upload to it:
+
+```json
+[{ "AllowedOrigins": ["https://admin.<domain>"], "AllowedMethods": ["PUT"], "AllowedHeaders": ["content-type"], "MaxAgeSeconds": 3600 }]
+```
+
 ## Scripts
 
 | Command | What it does |

@@ -44,3 +44,79 @@ export interface Dashboard {
   openReviewReports: number;
   unpaidDeliveryEarningsPaise: number;
 }
+
+// ---------------------------------------------------------------- catalog
+
+export interface Category {
+  id: string;
+  parentId: string | null;
+  name: string;
+  slug: string;
+  imageKey: string | null;
+  imageUrl: string | null;
+  sortOrder: number;
+  isActive: boolean;
+}
+
+export interface Brand {
+  id: string;
+  name: string;
+  slug: string;
+  logoKey: string | null;
+  logoUrl: string | null;
+  isActive: boolean;
+}
+
+export type ProductStatus = 'draft' | 'active' | 'hidden' | 'blocked';
+
+export interface ProductSummary {
+  id: string;
+  name: string;
+  partNumber: string | null;
+  brandName: string | null;
+  wholesaler: { id: string; businessName: string; city: string };
+  minPricePaise: number | null;
+  mrpPaise: number | null;
+  totalStock: number;
+  thumbnailUrl: string | null;
+  ratingAvg: number;
+  ratingCount: number;
+  status: ProductStatus;
+  statusReason: string | null;
+  createdAt: string;
+}
+
+export interface ProductDetail {
+  id: string;
+  name: string;
+  description: string | null;
+  partNumber: string | null;
+  hsnCode: string | null;
+  gstRateBps: number;
+  status: ProductStatus;
+  statusReason: string | null;
+  ratingAvg: number;
+  ratingCount: number;
+  category: { id: string; name: string };
+  brand: { id: string; name: string } | null;
+  wholesaler: { id: string; businessName: string; city: string; state: string };
+  images: { id: string; url: string; sortOrder: number }[];
+  variants: {
+    id: string;
+    name: string;
+    sku: string | null;
+    mrpPaise: number;
+    pricePaise: number;
+    stockQty: number;
+    minOrderQty: number;
+    isActive: boolean;
+    slabs: { minQty: number; pricePaise: number }[];
+  }[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface PresignedUpload {
+  objectKey: string;
+  upload: { method: 'PUT'; url: string; headers: Record<string, string>; expiresAt: string };
+}

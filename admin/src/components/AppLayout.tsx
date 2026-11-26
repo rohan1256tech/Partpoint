@@ -1,6 +1,6 @@
 import { ActionIcon, AppShell, Burger, Group, NavLink, Text, Tooltip, useMantineColorScheme } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
-import { IconGauge, IconLogout, IconMoon, IconSun, IconUsers } from '@tabler/icons-react';
+import { IconCategory, IconGauge, IconLogout, IconMoon, IconPackage, IconSun, IconTag, IconUsers } from '@tabler/icons-react';
 import { NavLink as RouterLink, Outlet, useLocation } from 'react-router';
 import { useSession } from '../auth/context';
 
@@ -8,6 +8,9 @@ import { useSession } from '../auth/context';
 const NAV = [
   { to: '/', label: 'Dashboard', icon: IconGauge },
   { to: '/users', label: 'Users', icon: IconUsers },
+  { to: '/catalog/products', label: 'Products', icon: IconPackage },
+  { to: '/catalog/categories', label: 'Categories', icon: IconCategory },
+  { to: '/catalog/brands', label: 'Brands', icon: IconTag },
 ] as const;
 
 export function AppLayout() {

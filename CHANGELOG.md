@@ -108,6 +108,11 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   first-time 2FA setup with a locally drawn QR code, session restored from the cookie, dark/light theme,
   dashboard (KPIs, accessible 30-day orders chart with table view, status counts, top sellers), and user
   approvals (filter by status/role, details, approve/unblock, block with reason). CI: `admin.yml`.
+- Admin panel, catalog: categories (two-level tree, create/edit, slug, order, visibility, image), brands
+  (search, create/edit, logo), product moderation (filter by status/wholesaler, search, details with variants,
+  bulk prices and images, block with reason / unblock). Images converted to WebP in the browser and uploaded
+  straight to R2. Pages load on demand (initial bundle 201 → 134 KB gzipped). Admin category/brand lists now
+  include image URLs.
 
 ### Fixed
 - Blank values in `.env` (e.g. `DEMO_OTP=`) stopped the API from starting; they now mean "not set".
