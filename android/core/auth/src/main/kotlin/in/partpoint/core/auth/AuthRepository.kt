@@ -11,6 +11,7 @@ import `in`.partpoint.core.network.BareClient
 import `in`.partpoint.core.network.TokenProvider
 import `in`.partpoint.core.network.apiCall
 import okhttp3.OkHttpClient
+import `in`.partpoint.core.auth.push.PushRegistrar
 import retrofit2.Retrofit
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -26,6 +27,7 @@ class AuthRepository @Inject constructor(
     private val api: AuthApi,
     private val session: SessionManager,
     private val config: ApiConfig,
+    private val push: PushRegistrar,
 ) {
     suspend fun requestOtp(phoneE164: String) = apiCall { api.requestOtp(OtpRequest(phoneE164)) }
 
@@ -64,6 +66,7 @@ class AuthRepository @Inject constructor(
     suspend fun reloadMe() = session.refreshMe { api.me() }
 
     suspend fun signOut() {
+        push.unregister() // while still signed in, so the server accepts the removal
         session.currentRefreshToken()?.let { token ->
             runCatching { apiCall { api.logout(LogoutBody(token)) } } // best effort when offline
         }
@@ -72,6 +75,7 @@ class AuthRepository @Inject constructor(
 
     /** Play policy: in-app account deletion. Throws with the server's reason when not possible yet. */
     suspend fun deleteAccount(reason: String?) {
+        push.unregister()
         apiCall { api.deleteAccount(DeleteAccountBody(reason = reason)) }
         session.endSession("Your account has been deleted.")
     }

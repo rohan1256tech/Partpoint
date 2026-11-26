@@ -24,6 +24,12 @@ android {
         targetSdk = 36
         versionCode = commitCount
         versionName = "0.1.0"
+        // Firebase (push). Empty values keep push off; see gradle.properties.
+        fun prop(name: String) = providers.gradleProperty(name).getOrElse("")
+        buildConfigField("String", "FIREBASE_PROJECT_ID", "\"${prop("partpoint.firebase.projectId")}\"")
+        buildConfigField("String", "FIREBASE_API_KEY", "\"${prop("partpoint.firebase.apiKey")}\"")
+        buildConfigField("String", "FIREBASE_SENDER_ID", "\"${prop("partpoint.firebase.senderId")}\"")
+        buildConfigField("String", "FIREBASE_APP_ID", "\"${prop("partpoint.firebase.appId.delivery")}\"")
     }
 
     buildTypes {

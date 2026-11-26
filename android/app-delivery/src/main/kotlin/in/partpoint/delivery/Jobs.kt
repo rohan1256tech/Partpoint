@@ -1,5 +1,7 @@
 package `in`.partpoint.delivery
 
+import `in`.partpoint.core.auth.push.NotificationPrompt
+import `in`.partpoint.core.auth.push.RefreshOnOrderPush
 import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.Intent
@@ -145,6 +147,7 @@ fun JobsScreen(onJob: (String) -> Unit, vm: JobsViewModel = hiltViewModel()) {
     val snackbar = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
     LaunchedEffect(Unit) { vm.reload() }
+    RefreshOnOrderPush { vm.reload(pullToRefresh = true) }
 
     Scaffold(topBar = { TopAppBar(title = { Text("Partpoint Delivery", fontWeight = FontWeight.Bold) }) }, snackbarHost = { SnackbarHost(snackbar) }) { padding ->
         when (val s = state) {
@@ -175,6 +178,7 @@ fun JobsScreen(onJob: (String) -> Unit, vm: JobsViewModel = hiltViewModel()) {
                             }
                         }
                     }
+                    item { NotificationPrompt("rider_jobs", "Get job offers instantly", "New delivery jobs are offered by notification. Without it you'll only see them when you open the app.") }
                     if (home.jobs.isEmpty()) {
                         item {
                             Column(Modifier.fillMaxWidth().padding(top = 48.dp)) {
@@ -279,6 +283,7 @@ fun JobScreen(onBack: () -> Unit, vm: JobViewModel = hiltViewModel()) {
     val context = LocalContext.current
     val showError: (String) -> Unit = { msg -> scope.launch { snackbar.showSnackbar(msg) } }
     var declining by remember { mutableStateOf(false) }
+    RefreshOnOrderPush { vm.reload(pullToRefresh = true) }
     val checked = remember { mutableStateListOf<Int>() }
 
     Scaffold(

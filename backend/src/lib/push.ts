@@ -1,6 +1,11 @@
 import type { FastifyBaseLogger } from 'fastify';
 import { importPKCS8, SignJWT } from 'jose';
 
+/** Order updates go to the "orders" channel; everything else (approvals, announcements) to "general". */
+export function androidChannel(data: Record<string, string>): 'orders' | 'general' {
+  return data.type === 'order' ? 'orders' : 'general';
+}
+
 export interface PushMessage {
   title: string;
   body: string;
@@ -68,7 +73,8 @@ export class FcmSender implements PushSender {
           token,
           notification: { title: message.title, body: message.body },
           data: message.data,
-          android: { priority: 'high' },
+          // Channel ids match the Android apps' notification channels (users can mute each one).
+          android: { priority: 'high', notification: { channel_id: androidChannel(message.data) } },
         },
       }),
       signal: AbortSignal.timeout(10_000),

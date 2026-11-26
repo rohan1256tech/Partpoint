@@ -1,5 +1,6 @@
 package `in`.partpoint.app.sell
 
+import `in`.partpoint.core.auth.push.OpenOrderFromNotification
 import `in`.partpoint.core.ui.Load
 import `in`.partpoint.core.ui.LoadingViewModel
 import androidx.compose.foundation.layout.Arrangement
@@ -86,6 +87,7 @@ fun SellerApp(me: Me) {
     val nav = rememberNavController()
     val entry by nav.currentBackStackEntryAsState()
     val onTab = SELLER_TABS.any { entry?.destination?.hasRoute(it.type) == true }
+    OpenOrderFromNotification { nav.navigate(SellerOrder(it)) }
     Scaffold(
         bottomBar = {
             if (onTab) {

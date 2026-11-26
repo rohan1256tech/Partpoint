@@ -173,6 +173,12 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   Google Maps two-wheeler directions and call buttons; earnings (today, 7 days, month, all time, unpaid)
   and recent deliveries. No location permission: directions are handed to Maps (README Play checklist
   updated). Shared loading helper moved to core:ui.
+- Push notifications in both apps (Firebase Cloud Messaging). Firebase is initialised from
+  gradle.properties values (no google-services file; empty = push off). Channels "Orders and deliveries"
+  and "Account and announcements"; the backend now sets the channel per message. The device token is
+  registered after sign-in and removed at sign-out/account deletion. Tapping a notification opens that
+  order or job; open lists and detail screens refresh when a push arrives. Notification permission
+  (Android 13+) is asked in context on each app's main work screen, once, with a reason.
 
 ### Fixed
 - Blank values in `.env` (e.g. `DEMO_OTP=`) stopped the API from starting; they now mean "not set".

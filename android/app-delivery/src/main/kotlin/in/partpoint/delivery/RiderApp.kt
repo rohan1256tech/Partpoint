@@ -1,5 +1,6 @@
 package `in`.partpoint.delivery
 
+import `in`.partpoint.core.auth.push.OpenOrderFromNotification
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -76,6 +77,7 @@ fun RiderApp(me: Me) {
     val nav = rememberNavController()
     val entry by nav.currentBackStackEntryAsState()
     val onTab = TABS.any { entry?.destination?.hasRoute(it.type) == true }
+    OpenOrderFromNotification { nav.navigate(JobRoute(it)) }
     Scaffold(
         bottomBar = {
             if (onTab) {

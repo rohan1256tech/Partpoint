@@ -5,6 +5,7 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import retrofit2.http.Body
 import retrofit2.http.GET
+import retrofit2.http.HTTP
 import retrofit2.http.Headers
 import retrofit2.http.POST
 import retrofit2.http.PUT
@@ -111,6 +112,9 @@ interface AuthApi {
 
     @PUT("v1/me/push-token")
     suspend fun registerPushToken(@Body body: PushTokenBody)
+
+    @HTTP(method = "DELETE", path = "v1/me/push-token", hasBody = true)
+    suspend fun removePushToken(@Body body: PushTokenBody)
 
     @POST("v1/me/delete-account")
     suspend fun deleteAccount(@Body body: DeleteAccountBody)

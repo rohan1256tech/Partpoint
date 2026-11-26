@@ -1,5 +1,6 @@
 package `in`.partpoint.delivery
 
+import `in`.partpoint.core.auth.push.PushRegistrar
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -53,10 +54,19 @@ import javax.inject.Inject
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
+    @Inject lateinit var push: PushRegistrar
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // Opened from a notification: remember which order to show.
+        push.handleLaunch(intent)
         enableEdgeToEdge()
         setContent { PartpointTheme { Root() } }
+    }
+
+    override fun onNewIntent(intent: android.content.Intent) {
+        super.onNewIntent(intent)
+        push.handleLaunch(intent)
     }
 }
 

@@ -24,6 +24,9 @@ dependencies {
     implementation(project(":core:ui"))
 
     implementation(libs.androidx.datastore.preferences)
+    api(platform(libs.firebase.bom))
+    api(libs.firebase.messaging)
+    implementation(libs.kotlinx.coroutines.play.services)
     implementation(libs.kotlinx.coroutines.android)
     implementation(libs.hilt.android)
     ksp(libs.hilt.compiler)

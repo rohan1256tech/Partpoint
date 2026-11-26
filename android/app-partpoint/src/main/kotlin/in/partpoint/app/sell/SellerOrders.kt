@@ -1,5 +1,7 @@
 package `in`.partpoint.app.sell
 
+import `in`.partpoint.core.auth.push.NotificationPrompt
+import `in`.partpoint.core.auth.push.RefreshOnOrderPush
 import `in`.partpoint.core.ui.Load
 import `in`.partpoint.core.ui.LoadingViewModel
 import android.content.ActivityNotFoundException
@@ -136,9 +138,11 @@ fun SellerOrdersScreen(onOrder: (String) -> Unit, vm: SellerOrdersViewModel = hi
     val refreshing by vm.refreshing.collectAsStateWithLifecycle()
     var tab by rememberSaveable { mutableStateOf(SellerTab.NEW) }
     LaunchedEffect(Unit) { vm.reload() }
+    RefreshOnOrderPush { vm.reload(pullToRefresh = true) }
 
     Scaffold(topBar = { TopAppBar(title = { Text("Orders") }) }) { padding ->
         Column(Modifier.padding(padding)) {
+            NotificationPrompt("seller_orders", "Don't miss a new order", "Retailers are waiting once they order. Turn on notifications to hear about new orders right away.", Modifier.padding(16.dp))
             PrimaryScrollableTabRow(selectedTabIndex = tab.ordinal, edgePadding = 8.dp) {
                 SellerTab.entries.forEach { t ->
                     val n = counts[t] ?: 0
@@ -254,6 +258,7 @@ fun SellerOrderScreen(onBack: () -> Unit, vm: SellerOrderViewModel = hiltViewMod
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
     var rejecting by remember { mutableStateOf(false) }
+    RefreshOnOrderPush { vm.reload(pullToRefresh = true) }
     val showError: (String) -> Unit = { msg -> scope.launch { snackbar.showSnackbar(msg) } }
 
     Scaffold(

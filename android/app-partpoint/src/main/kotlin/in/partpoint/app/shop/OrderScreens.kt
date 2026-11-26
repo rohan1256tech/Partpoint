@@ -1,5 +1,7 @@
 package `in`.partpoint.app.shop
 
+import `in`.partpoint.core.auth.push.NotificationPrompt
+import `in`.partpoint.core.auth.push.RefreshOnOrderPush
 import `in`.partpoint.core.ui.Load
 import `in`.partpoint.core.ui.LoadingViewModel
 import android.content.ActivityNotFoundException
@@ -107,6 +109,7 @@ fun OrdersScreen(onOrder: (String) -> Unit, onBrowse: () -> Unit, vm: OrdersView
     val state by vm.state.collectAsStateWithLifecycle()
     val refreshing by vm.refreshing.collectAsStateWithLifecycle()
     LaunchedEffect(Unit) { vm.reload() } // fresh statuses whenever the tab is opened
+    RefreshOnOrderPush { vm.reload(pullToRefresh = true) }
     Scaffold(topBar = { TopAppBar(title = { Text("My orders") }) }) { padding ->
         when (val s = state) {
             Load.Loading -> LoadingScreen()
@@ -119,6 +122,7 @@ fun OrdersScreen(onOrder: (String) -> Unit, onBrowse: () -> Unit, vm: OrdersView
                 PullToRefreshBox(isRefreshing = refreshing, onRefresh = { vm.reload(pullToRefresh = true) }, modifier = Modifier.padding(padding)) {
                     val (ongoing, past) = s.data.partition { it.status !in setOf("delivered", "cancelled") }
                     LazyColumn(contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxSize()) {
+                        item { NotificationPrompt("retailer_orders", "Know when your parts are on the way", "Get a notification when the seller accepts, the rider picks up and your order arrives.") }
                         if (ongoing.isNotEmpty()) {
                             item { Text("In progress", style = MaterialTheme.typography.titleSmall) }
                             items(ongoing, key = { it.id }) { OrderRow(it) { onOrder(it.id) } }
@@ -214,6 +218,7 @@ fun OrderDetailScreen(onBack: () -> Unit, onProduct: (String) -> Unit, vm: Order
     val context = LocalContext.current
     var confirmCancel by remember { mutableStateOf(false) }
     var invoiceBusy by remember { mutableStateOf(false) }
+    RefreshOnOrderPush { vm.reload(pullToRefresh = true) }
 
     Scaffold(
         topBar = {

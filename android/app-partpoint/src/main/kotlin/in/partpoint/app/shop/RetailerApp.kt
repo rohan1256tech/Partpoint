@@ -1,5 +1,6 @@
 package `in`.partpoint.app.shop
 
+import `in`.partpoint.core.auth.push.OpenOrderFromNotification
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Category
@@ -77,6 +78,7 @@ fun RetailerApp(me: Me, shell: RetailerShellViewModel = hiltViewModel()) {
     LaunchedEffect(Unit) { runCatching { shell.cart.refresh() } }
     val entry by nav.currentBackStackEntryAsState()
     val onTab = TABS.any { t -> entry?.destination?.hasRoute(t.type) == true }
+    OpenOrderFromNotification { nav.navigate(Order(it)) }
 
     Scaffold(
         bottomBar = {
