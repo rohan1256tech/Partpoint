@@ -132,6 +132,12 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
     and percent, stored as paise and basis points.
   - Account deletions: process web-form requests (complete or reject with note), history of in-app ones.
 - Admin banner list now includes image URLs.
+- Android project (`android/`): Partpoint and Partpoint Delivery apps sharing core modules. Phone OTP sign-in
+  with SMS code autofill and resend timer, new-account signup (retailer, wholesaler with address and GSTIN
+  check, or rider with vehicle), waiting-for-approval screen, sign out, in-app account deletion. Session
+  restored at start; access token in memory, refresh token encrypted with an Android Keystore key, single
+  shared refresh on 401. Backups off, HTTPS-only release builds, R8. Unit tests for phone numbers, refresh
+  and retry. CI: `android.yml` (tests, debug APKs).
 
 ### Fixed
 - Blank values in `.env` (e.g. `DEMO_OTP=`) stopped the API from starting; they now mean "not set".

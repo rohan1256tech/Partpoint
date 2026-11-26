@@ -1,0 +1,12 @@
+.gradle/
+build/
+local.properties
+.kotlin/
+.idea/
+*.iml
+captures/
+# Signing material never goes in git (README: keystore in CI secrets).
+*.jks
+*.keystore
+keystore.properties
+google-services.json
