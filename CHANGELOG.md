@@ -182,6 +182,10 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Admin announcements: push a short title and message to approved retailers, wholesalers, delivery
   partners or everyone, with a phone-style preview and a confirmation (pushes can't be recalled). History
   with accounts and devices reached; kept in the audit log. Max 10 per hour.
+- Partpoint app: email sign-in ("Sign in with email instead"), email signup (email and password with the
+  same business details, verified by an emailed 6-digit code), and forgot password (code by email, new
+  password, other sessions signed out). An unverified email at sign-in sends a fresh code and opens the
+  code screen. The Delivery app stays phone-only, since riders must be reachable by phone.
 
 ### Fixed
 - Blank values in `.env` (e.g. `DEMO_OTP=`) stopped the API from starting; they now mean "not set".

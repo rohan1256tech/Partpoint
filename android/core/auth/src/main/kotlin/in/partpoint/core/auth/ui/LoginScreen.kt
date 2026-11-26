@@ -120,6 +120,8 @@ fun LoginScreen(
     appTitle: String,
     tagline: String,
     onNeedsSignup: (phone: String, registrationToken: String) -> Unit,
+    /** Shown as "Sign in with email instead" when set (the Partpoint app). */
+    onUseEmail: (() -> Unit)? = null,
     vm: LoginViewModel = hiltViewModel(),
 ) {
     val s by vm.state.collectAsStateWithLifecycle()
@@ -148,6 +150,7 @@ fun LoginScreen(
             )
             ErrorText(s.error)
             PrimaryButton("Send code", onClick = vm::sendCode, loading = s.busy)
+            if (onUseEmail != null) TextButton(onClick = onUseEmail) { Text("Sign in with email instead") }
         } else {
             SecureScreen() // no screenshots of the code
             Text("Enter the 6-digit code sent to +91 ${PhoneNumber.display(s.phone!!)}")

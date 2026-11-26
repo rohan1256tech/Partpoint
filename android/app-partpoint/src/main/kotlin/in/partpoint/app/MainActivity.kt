@@ -25,6 +25,10 @@ import `in`.partpoint.core.auth.Me
 import `in`.partpoint.core.auth.Session
 import `in`.partpoint.core.auth.ui.AccountActions
 import `in`.partpoint.core.auth.ui.LoginScreen
+import `in`.partpoint.core.auth.ui.EmailSignInScreen
+import `in`.partpoint.core.auth.ui.ForgotPasswordScreen
+import `in`.partpoint.core.auth.ui.VerifyEmailScreen
+import androidx.compose.foundation.layout.padding
 import `in`.partpoint.core.auth.ui.PendingApprovalScreen
 import `in`.partpoint.core.auth.ui.SessionViewModel
 import `in`.partpoint.core.auth.ui.SignedOutNotice
@@ -52,7 +56,11 @@ class MainActivity : ComponentActivity() {
 }
 
 @Serializable private data object Login
-@Serializable private data class Signup(val phone: String, val token: String)
+/** New account: by verified phone ([token] set) or by email and password ([token] null). */
+@Serializable private data class Signup(val phone: String? = null, val token: String? = null)
+@Serializable private data object EmailSignIn
+@Serializable private data class VerifyEmail(val email: String)
+@Serializable private data class ForgotPassword(val email: String = "")
 
 @Composable
 private fun Root(vm: SessionViewModel = hiltViewModel()) {
@@ -80,12 +88,38 @@ private fun SignedOutFlow(notice: String?) {
                     appTitle = "Partpoint",
                     tagline = "Spare parts from trusted wholesalers, delivered to your shop.",
                     onNeedsSignup = { phone, token -> nav.navigate(Signup(phone, token)) { launchSingleTop = true } },
+                    onUseEmail = { nav.navigate(EmailSignIn) { launchSingleTop = true } },
                 )
             }
         }
         composable<Signup> { entry ->
             val args = entry.toRoute<Signup>()
-            SignupScreen(phone = args.phone, registrationToken = args.token, onBack = { nav.popBackStack() })
+            SignupScreen(
+                phone = args.phone,
+                registrationToken = args.token,
+                onBack = { nav.popBackStack() },
+                onEmailCodeSent = { email -> nav.navigate(VerifyEmail(email)) { popUpTo(Login) } },
+            )
+        }
+        composable<EmailSignIn> {
+            androidx.compose.foundation.layout.Column {
+                EmailSignInScreen(
+                    onNeedsVerification = { nav.navigate(VerifyEmail(it)) },
+                    onForgot = { nav.navigate(ForgotPassword(it)) },
+                    onUsePhone = { nav.popBackStack() },
+                )
+                androidx.compose.material3.TextButton(onClick = { nav.navigate(Signup()) }, modifier = androidx.compose.ui.Modifier.padding(horizontal = 16.dp)) {
+                    Text("New to Partpoint? Create an account with email")
+                }
+            }
+        }
+        composable<VerifyEmail> { e -> VerifyEmailScreen(e.toRoute<VerifyEmail>().email, onBack = { nav.popBackStack() }) }
+        composable<ForgotPassword> { e ->
+            ForgotPasswordScreen(
+                initialEmail = e.toRoute<ForgotPassword>().email,
+                onDone = { nav.popBackStack(EmailSignIn, inclusive = false) },
+                onBack = { nav.popBackStack() },
+            )
         }
     }
 }

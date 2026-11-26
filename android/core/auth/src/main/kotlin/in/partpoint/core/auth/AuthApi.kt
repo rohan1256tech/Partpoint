@@ -79,6 +79,28 @@ data class RegisterPhone(
 data class RegisterResult(val user: Me, val tokens: Tokens)
 
 @Serializable
+data class EmailLogin(val email: String, val password: String, val app: String, val deviceId: String)
+
+/** Either signed in (tokens) or, for admins only, a 2FA challenge — the apps never get the latter. */
+@Serializable
+data class EmailLoginResult(val user: Me? = null, val tokens: Tokens? = null)
+
+@Serializable
+data class RegisterEmail(
+    val email: String,
+    val password: String,
+    val name: String,
+    val consent: Boolean,
+    val profile: SignupProfile,
+    val app: String,
+    val deviceId: String,
+)
+
+@Serializable data class EmailOnly(val email: String)
+@Serializable data class EmailVerify(val email: String, val code: String, val app: String, val deviceId: String)
+@Serializable data class PasswordReset(val email: String, val code: String, val newPassword: String)
+
+@Serializable
 data class RefreshBody(val refreshToken: String, val deviceId: String)
 
 @Serializable
@@ -102,6 +124,30 @@ interface AuthApi {
     @Headers("${AuthInterceptor.NO_AUTH}: 1")
     @POST("v1/auth/register/phone")
     suspend fun registerPhone(@Body body: RegisterPhone): RegisterResult
+
+    @Headers("${AuthInterceptor.NO_AUTH}: 1")
+    @POST("v1/auth/login/email")
+    suspend fun loginEmail(@Body body: EmailLogin): EmailLoginResult
+
+    @Headers("${AuthInterceptor.NO_AUTH}: 1")
+    @POST("v1/auth/register/email")
+    suspend fun registerEmail(@Body body: RegisterEmail)
+
+    @Headers("${AuthInterceptor.NO_AUTH}: 1")
+    @POST("v1/auth/email/verify/request")
+    suspend fun requestEmailCode(@Body body: EmailOnly)
+
+    @Headers("${AuthInterceptor.NO_AUTH}: 1")
+    @POST("v1/auth/email/verify")
+    suspend fun verifyEmail(@Body body: EmailVerify): RegisterResult
+
+    @Headers("${AuthInterceptor.NO_AUTH}: 1")
+    @POST("v1/auth/password/forgot")
+    suspend fun forgotPassword(@Body body: EmailOnly)
+
+    @Headers("${AuthInterceptor.NO_AUTH}: 1")
+    @POST("v1/auth/password/reset")
+    suspend fun resetPassword(@Body body: PasswordReset)
 
     @Headers("${AuthInterceptor.NO_AUTH}: 1")
     @POST("v1/auth/logout")

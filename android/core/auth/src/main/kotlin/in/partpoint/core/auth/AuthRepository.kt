@@ -60,6 +60,37 @@ class AuthRepository @Inject constructor(
         session.signedIn(res.tokens, res.user)
     }
 
+    // ---- email + password (the Partpoint app; riders sign in by phone)
+
+    /** Returns false when the email is not verified yet: the app then asks for the emailed code. */
+    suspend fun signInWithEmail(email: String, password: String): Boolean {
+        val res = try {
+            apiCall { api.loginEmail(EmailLogin(email.trim(), password, config.app.wire, session.deviceId)) }
+        } catch (e: `in`.partpoint.core.network.ApiException.Http) {
+            if (e.code == "EMAIL_NOT_VERIFIED") {
+                apiCall { api.requestEmailCode(EmailOnly(email.trim())) }
+                return false
+            }
+            throw e
+        }
+        session.signedIn(requireNotNull(res.tokens), requireNotNull(res.user))
+        return true
+    }
+
+    /** Creates the account; a 6-digit code is emailed to verify it. */
+    suspend fun registerWithEmail(email: String, password: String, name: String, profile: SignupProfile) =
+        apiCall { api.registerEmail(RegisterEmail(email.trim(), password, name, true, profile, config.app.wire, session.deviceId)) }
+
+    suspend fun verifyEmail(email: String, code: String) {
+        val res = apiCall { api.verifyEmail(EmailVerify(email.trim(), code, config.app.wire, session.deviceId)) }
+        session.signedIn(res.tokens, res.user)
+    }
+
+    suspend fun resendEmailCode(email: String) = apiCall { api.requestEmailCode(EmailOnly(email.trim())) }
+    suspend fun forgotPassword(email: String) = apiCall { api.forgotPassword(EmailOnly(email.trim())) }
+    suspend fun resetPassword(email: String, code: String, newPassword: String) =
+        apiCall { api.resetPassword(PasswordReset(email.trim(), code, newPassword)) }
+
     suspend fun restore() = session.restore { api.me() }
 
     /** E.g. pull-to-refresh on the "awaiting approval" screen. */

@@ -38,6 +38,9 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import `in`.partpoint.core.auth.AuthRepository
 import `in`.partpoint.core.auth.PhoneNumber
 import `in`.partpoint.core.auth.SignupProfile
+import `in`.partpoint.core.auth.ui.EmailField
+import `in`.partpoint.core.auth.ui.PasswordField
+import `in`.partpoint.core.auth.ui.looksLikeEmail
 import `in`.partpoint.core.network.ApiException
 import `in`.partpoint.core.ui.ErrorText
 import `in`.partpoint.core.ui.PrimaryButton
@@ -50,9 +53,21 @@ class SignupViewModel @Inject constructor(val auth: AuthRepository) : ViewModel(
 private val GSTIN = Regex("^\\d{2}[A-Z]{5}\\d{4}[A-Z][1-9A-Z]Z[0-9A-Z]$")
 private val PINCODE = Regex("^[1-9]\\d{5}$")
 
-/** New number: who you are, your business, and consent to the privacy policy. */
+/**
+ * New account: who you are, your business, and consent to the privacy policy. Either after a
+ * verified phone ([registrationToken]) or with email and password, verified by an emailed code.
+ */
 @Composable
-fun SignupScreen(phone: String, registrationToken: String, onBack: () -> Unit, vm: SignupViewModel = hiltViewModel()) {
+fun SignupScreen(
+    phone: String?,
+    registrationToken: String?,
+    onBack: () -> Unit,
+    onEmailCodeSent: (email: String) -> Unit,
+    vm: SignupViewModel = hiltViewModel(),
+) {
+    val byEmail = registrationToken == null
+    var email by remember { mutableStateOf("") }
+    var password by remember { mutableStateOf("") }
     var wholesaler by remember { mutableStateOf(false) }
     var name by remember { mutableStateOf("") }
     var business by remember { mutableStateOf("") }
@@ -68,7 +83,8 @@ fun SignupScreen(phone: String, registrationToken: String, onBack: () -> Unit, v
 
     val gstinOk = gstin.isBlank() || GSTIN.matches(gstin.trim().uppercase())
     val addressOk = !wholesaler || (address.isNotBlank() && city.isNotBlank() && state.isNotBlank() && PINCODE.matches(pincode))
-    val valid = name.isNotBlank() && business.isNotBlank() && gstinOk && addressOk && consent
+    val credentialsOk = !byEmail || (looksLikeEmail(email) && password.length >= 8)
+    val valid = name.isNotBlank() && business.isNotBlank() && gstinOk && addressOk && consent && credentialsOk
 
     fun submit() {
         val profile = if (wholesaler) {
@@ -87,7 +103,12 @@ fun SignupScreen(phone: String, registrationToken: String, onBack: () -> Unit, v
             busy = true
             error = null
             try {
-                vm.auth.register(registrationToken, name.trim(), profile, email = null)
+                if (registrationToken != null) {
+                    vm.auth.register(registrationToken, name.trim(), profile, email = null)
+                } else {
+                    vm.auth.registerWithEmail(email, password, name.trim(), profile)
+                    onEmailCodeSent(email.trim())
+                }
             } catch (e: ApiException) {
                 error = e.message
             } finally {
@@ -102,7 +123,11 @@ fun SignupScreen(phone: String, registrationToken: String, onBack: () -> Unit, v
             verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
             Text("Create your account", style = MaterialTheme.typography.headlineSmall)
-            Text("+91 ${PhoneNumber.display(phone)} is verified.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+            if (phone != null) Text("+91 ${PhoneNumber.display(phone)} is verified.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+            if (byEmail) {
+                EmailField(email, { email = it })
+                PasswordField("Choose a password", password, { password = it }, newPassword = true)
+            }
 
             SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
                 SegmentedButton(selected = !wholesaler, onClick = { wholesaler = false }, shape = SegmentedButtonDefaults.itemShape(0, 2)) { Text("I buy (retailer)") }
