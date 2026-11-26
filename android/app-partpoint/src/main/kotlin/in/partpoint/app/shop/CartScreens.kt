@@ -1,5 +1,6 @@
 package `in`.partpoint.app.shop
 
+import androidx.compose.foundation.layout.imePadding
 import `in`.partpoint.core.ui.Load
 import `in`.partpoint.core.ui.LoadingViewModel
 import androidx.compose.foundation.layout.Arrangement
@@ -325,7 +326,7 @@ fun CheckoutScreen(onBack: () -> Unit, onPlaced: (List<Triple<String, String, Lo
             is Load.Ready -> {
                 val addresses = s.data.addresses
                 LaunchedEffect(addresses) { if (selected == null) selected = (addresses.firstOrNull { it.isDefault } ?: addresses.firstOrNull())?.id }
-                Column(Modifier.padding(padding).fillMaxSize()) {
+                Column(Modifier.padding(padding).fillMaxSize().imePadding()) {
                     LazyColumn(Modifier.weight(1f), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                         item { Text("Deliver to", style = MaterialTheme.typography.titleMedium) }
                         items(addresses, key = { it.id }) { a ->

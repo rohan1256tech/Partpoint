@@ -27,6 +27,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
@@ -143,10 +144,13 @@ fun ErrorState(message: String, onRetry: () -> Unit) =
 /** A small rounded status label, e.g. order status. */
 @Composable
 fun StatusPill(text: String, color: Color, modifier: Modifier = Modifier) {
-    Surface(modifier, shape = RoundedCornerShape(50), color = color.copy(alpha = 0.14f)) {
+    // Status colours are tuned for light mode; lighten them on dark surfaces so the text stays readable.
+    val dark = MaterialTheme.colorScheme.surface.luminance() < 0.5f
+    val ink = if (dark) lerp(color, Color.White, 0.45f) else color
+    Surface(modifier, shape = RoundedCornerShape(50), color = color.copy(alpha = if (dark) 0.22f else 0.14f)) {
         Text(
             text,
-            color = color,
+            color = ink,
             style = MaterialTheme.typography.labelMedium,
             fontWeight = FontWeight.SemiBold,
             modifier = Modifier.padding(horizontal = 10.dp, vertical = 3.dp),

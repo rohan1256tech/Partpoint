@@ -48,7 +48,8 @@ data class Place(
     val longitude: Double? = null,
 ) {
     fun street() = addressLine ?: listOfNotNull(line1, line2, landmark).joinToString(", ")
-    fun full() = "${street()}, $city $pincode"
+    /** After delivery the street is withheld; show just the area then, without a stray comma. */
+    fun full() = listOf(street(), "$city $pincode").filter { it.isNotBlank() }.joinToString(", ")
     fun phoneNumber() = phone ?: contactPhone
 }
 

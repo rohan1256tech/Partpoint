@@ -1,5 +1,6 @@
 package `in`.partpoint.app.sell
 
+import androidx.compose.foundation.layout.imePadding
 import `in`.partpoint.core.ui.Load
 import `in`.partpoint.core.ui.LoadingViewModel
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -366,7 +367,7 @@ fun ProductEditorScreen(onBack: () -> Unit, vm: ProductEditorViewModel = hiltVie
         when {
             s.loading -> LoadingScreen()
             s.loadError != null -> ErrorState(s.loadError!!) { vm.load() }
-            else -> Column(Modifier.padding(padding).fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+            else -> Column(Modifier.padding(padding).fillMaxSize().imePadding().verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
                 if (d.status == "blocked") {
                     Surface(shape = RoundedCornerShape(12.dp), color = MaterialTheme.colorScheme.errorContainer) {
                         Text("Blocked by Partpoint: ${d.statusReason ?: "contact support"}. Retailers can't see it.", modifier = Modifier.padding(12.dp), color = MaterialTheme.colorScheme.onErrorContainer)

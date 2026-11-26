@@ -1,5 +1,8 @@
 package `in`.partpoint.core.ui
 
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import android.app.Activity
 import android.view.WindowManager
 import androidx.compose.foundation.layout.Arrangement
@@ -59,7 +62,8 @@ fun LoadingScreen() {
 fun ScreenColumn(modifier: Modifier = Modifier, content: @Composable () -> Unit) {
     Surface(Modifier.fillMaxSize()) {
         Column(
-            modifier = modifier.fillMaxSize().padding(horizontal = 24.dp, vertical = 32.dp),
+            // Scrolls, and stays clear of the keyboard (the apps draw edge to edge).
+            modifier = modifier.fillMaxSize().imePadding().verticalScroll(rememberScrollState()).padding(horizontal = 24.dp, vertical = 32.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) { content() }
     }

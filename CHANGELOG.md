@@ -200,6 +200,10 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   failed to load because sellers (correctly) receive only the delivery area, not the retailer's contact
   and street. Both are covered by tests decoding the real replies. Privacy policy wording corrected to say
   sellers see the delivery area. Savings green is lighter in dark mode for contrast.
+- Fixed (phone testing): the rider's "Confirm delivery" button was hidden behind the keyboard while typing
+  the code; forms now stay clear of the keyboard (checkout, product editor, sign-in screens) and the
+  keyboard's Done key confirms the delivery. After delivery the rider sees only the area (no stray comma,
+  no Navigate). Status labels are readable in dark mode.
 
 ### Fixed
 - Blank values in `.env` (e.g. `DEMO_OTP=`) stopped the API from starting; they now mean "not set".

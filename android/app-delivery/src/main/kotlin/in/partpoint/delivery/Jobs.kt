@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -21,6 +22,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -64,6 +66,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -300,14 +303,17 @@ fun JobScreen(onBack: () -> Unit, vm: JobViewModel = hiltViewModel()) {
             is Load.Failed -> ErrorState(s.message) { vm.reload() }
             is Load.Ready -> {
                 val j = s.data
-                Column(Modifier.padding(padding).fillMaxSize()) {
+                // imePadding keeps the action bar (e.g. Confirm delivery) above the keyboard.
+                Column(Modifier.padding(padding).fillMaxSize().imePadding()) {
                     Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
                         StepBanner(j)
                         val pickup = j.pickup
                         if (pickup != null && j.status in setOf("assigned", "picked_up")) {
                             PlaceCard("Pick up from", pickup.businessName ?: j.wholesaler.businessName.orEmpty(), pickup, context, highlight = j.status == "assigned" && j.deliveryAccepted)
                         }
-                        PlaceCard("Deliver to", j.retailer?.shopName ?: j.address.contactName.orEmpty(), j.address, context, highlight = j.status == "picked_up" || j.status == "out_for_delivery")
+                        if (j.status != "delivered") {
+                            PlaceCard("Deliver to", j.retailer?.shopName ?: j.address.contactName.orEmpty(), j.address, context, highlight = j.status == "picked_up" || j.status == "out_for_delivery")
+                        }
 
                         if (j.status != "delivered") {
                             Text("Items (${j.itemCount})", style = MaterialTheme.typography.titleSmall)
@@ -433,7 +439,8 @@ private fun CodeEntry(busy: Boolean, onSubmit: (String) -> Unit) {
             label = { Text("Retailer's 4-digit delivery code") },
             singleLine = true,
             textStyle = MaterialTheme.typography.headlineSmall.copy(letterSpacing = 12.sp, textAlign = TextAlign.Center),
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword, imeAction = ImeAction.Done),
+            keyboardActions = KeyboardActions(onDone = { if (code.length == 4 && !busy) onSubmit(code) }),
             modifier = Modifier.fillMaxWidth(),
         )
         PrimaryButton("Confirm delivery", onClick = { onSubmit(code) }, enabled = code.length == 4, loading = busy)
