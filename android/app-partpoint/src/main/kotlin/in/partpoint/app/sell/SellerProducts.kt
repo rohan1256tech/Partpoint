@@ -1,5 +1,7 @@
 package `in`.partpoint.app.sell
 
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.foundation.layout.imePadding
 import `in`.partpoint.core.ui.Load
 import `in`.partpoint.core.ui.LoadingViewModel
@@ -140,7 +142,13 @@ fun SellerProductsScreen(onProduct: (String?) -> Unit, vm: SellerProductsViewMod
     Scaffold(
         topBar = { TopAppBar(title = { Text("My products") }) },
         floatingActionButton = {
-            ExtendedFloatingActionButton(onClick = { onProduct(null) }, icon = { Icon(Icons.Outlined.Add, null) }, text = { Text("Add product") })
+            ExtendedFloatingActionButton(
+                onClick = { onProduct(null) },
+                icon = { Icon(Icons.Outlined.Add, null) },
+                text = { Text("Add product") },
+                // Explicit label: screen readers did not announce this button otherwise.
+                modifier = Modifier.semantics { contentDescription = "Add product" },
+            )
         },
     ) { padding ->
         when (val s = state) {
@@ -261,7 +269,8 @@ class ProductEditorViewModel @Inject constructor(
         val d = _state.value.draft
         if (d.problems().isNotEmpty()) {
             _state.update { it.copy(showProblems = true) }
-            _messages.value = "Fix the highlighted problems first"
+            // Name the first problem: the full list is at the top of the form, possibly off screen.
+            _messages.value = d.problems().first()
             return@launch
         }
         _state.update { it.copy(saving = true) }
@@ -406,6 +415,7 @@ fun ProductEditorScreen(onBack: () -> Unit, vm: ProductEditorViewModel = hiltVie
                 d.variants.forEachIndexed { i, v ->
                     VariantCard(
                         v,
+                        showProblems = s.showProblems,
                         canRemove = v.id == null && d.variants.size > 1,
                         onChange = { nv -> vm.edit { p -> p.copy(variants = p.variants.toMutableList().also { it[i] = nv }) } },
                         onRemove = { vm.edit { p -> p.copy(variants = p.variants.toMutableList().also { it.removeAt(i) }) } },
@@ -435,6 +445,7 @@ private fun Input(
     capitalization: KeyboardCapitalization = KeyboardCapitalization.None,
     keyboard: KeyboardType = KeyboardType.Text,
     prefix: String? = null,
+    isError: Boolean = false,
     onChange: (String) -> Unit,
 ) {
     OutlinedTextField(
@@ -442,6 +453,7 @@ private fun Input(
         onChange,
         label = { Text(label) },
         singleLine = true,
+        isError = isError,
         prefix = prefix?.let { { Text(it) } },
         keyboardOptions = KeyboardOptions(capitalization = capitalization, keyboardType = keyboard),
         modifier = modifier,
@@ -559,12 +571,18 @@ private fun PickerField(label: String, value: String, onClick: () -> Unit) {
     Box {
         OutlinedTextField(value, {}, label = { Text(label) }, readOnly = true, singleLine = true, placeholder = { Text("Tap to choose") }, modifier = Modifier.fillMaxWidth())
         // Covers the read-only field so the whole box opens the picker.
-        Box(Modifier.matchParentSize().clickable(role = Role.Button, onClickLabel = "Choose $label", onClick = onClick))
+        Box(
+            Modifier.matchParentSize()
+                .clickable(role = Role.Button, onClickLabel = "Choose $label", onClick = onClick)
+                .semantics { contentDescription = if (value.isBlank()) "$label, not chosen" else "$label: $value" },
+        )
     }
 }
 
 @Composable
-private fun VariantCard(v: VariantDraft, canRemove: Boolean, onChange: (VariantDraft) -> Unit, onRemove: () -> Unit) {
+private fun VariantCard(v: VariantDraft, showProblems: Boolean, canRemove: Boolean, onChange: (VariantDraft) -> Unit, onRemove: () -> Unit) {
+    val problems = if (showProblems) v.problems() else emptyList()
+    val priceTooHigh = showProblems && (parseRupees(v.price) ?: 0) > (parseRupees(v.mrp) ?: Long.MAX_VALUE)
     Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow), shape = RoundedCornerShape(14.dp)) {
         Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -573,7 +591,7 @@ private fun VariantCard(v: VariantDraft, canRemove: Boolean, onChange: (VariantD
             }
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Input("MRP", v.mrp, Modifier.weight(1f), keyboard = KeyboardType.Decimal, prefix = "₹ ") { onChange(v.copy(mrp = it.filter { c -> c.isDigit() || c == '.' }.take(12))) }
-                Input("Your price", v.price, Modifier.weight(1f), keyboard = KeyboardType.Decimal, prefix = "₹ ") { onChange(v.copy(price = it.filter { c -> c.isDigit() || c == '.' }.take(12))) }
+                Input("Your price", v.price, Modifier.weight(1f), keyboard = KeyboardType.Decimal, prefix = "₹ ", isError = priceTooHigh) { onChange(v.copy(price = it.filter { c -> c.isDigit() || c == '.' }.take(12))) }
             }
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Input("Stock", v.stock, Modifier.weight(1f), keyboard = KeyboardType.Number) { onChange(v.copy(stock = it.filter(Char::isDigit).take(8))) }
@@ -588,6 +606,7 @@ private fun VariantCard(v: VariantDraft, canRemove: Boolean, onChange: (VariantD
                 }
             }
             if (v.slabs.size < 5) TextButton(onClick = { onChange(v.copy(slabs = v.slabs + SlabDraft())) }) { Text("+ Add a bulk price, e.g. 10+ at a lower price") }
+            problems.forEach { Text("• $it", color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall) }
             if (v.id != null) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text("On sale", modifier = Modifier.weight(1f))

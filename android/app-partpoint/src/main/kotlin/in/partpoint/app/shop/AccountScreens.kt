@@ -113,7 +113,7 @@ class AddressesViewModel @Inject constructor(private val api: ShopApi) : Loading
 
     suspend fun delete(id: String) {
         apiCall { api.deleteAddress(id) }
-        update { list -> list.filterNot { it.id == id } }
+        reload() // the server may promote another address to default
     }
 
     suspend fun makeDefault(a: Address) = save(a.id, a.toInput().copy(isDefault = true))
@@ -126,6 +126,7 @@ fun Address.toInput() = AddressInput(label, contactName, contactPhone, line1, li
 fun AddressesScreen(onBack: () -> Unit, vm: AddressesViewModel = hiltViewModel()) {
     val state by vm.state.collectAsStateWithLifecycle()
     var editing by rememberSaveable { mutableStateOf<String?>(null) } // address id, "new", or null
+    var confirmDelete by remember { mutableStateOf<Address?>(null) }
     val snackbar = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
     fun act(block: suspend () -> Unit) = scope.launch {
@@ -164,7 +165,7 @@ fun AddressesScreen(onBack: () -> Unit, vm: AddressesViewModel = hiltViewModel()
                                 Row {
                                     TextButton(onClick = { editing = a.id }) { Text("Edit") }
                                     if (!a.isDefault) TextButton(onClick = { act { vm.makeDefault(a) } }) { Text("Make default") }
-                                    TextButton(onClick = { act { vm.delete(a.id) } }) { Text("Delete", color = MaterialTheme.colorScheme.error) }
+                                    TextButton(onClick = { confirmDelete = a }) { Text("Delete", color = MaterialTheme.colorScheme.error) }
                                 }
                             }
                         }
@@ -179,6 +180,20 @@ fun AddressesScreen(onBack: () -> Unit, vm: AddressesViewModel = hiltViewModel()
                 }
             }
         }
+    }
+    confirmDelete?.let { a ->
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { confirmDelete = null },
+            title = { Text("Delete this address?") },
+            text = { Text("${a.label}: ${a.oneLine()}") },
+            confirmButton = {
+                TextButton(onClick = {
+                    confirmDelete = null
+                    act { vm.delete(a.id) }
+                }) { Text("Delete", color = MaterialTheme.colorScheme.error) }
+            },
+            dismissButton = { TextButton(onClick = { confirmDelete = null }) { Text("Keep") } },
+        )
     }
 }
 

@@ -307,7 +307,7 @@ fun SellerOrderScreen(onBack: () -> Unit, vm: SellerOrderViewModel = hiltViewMod
                         }
                     }
 
-                    Text("Items to pack", style = MaterialTheme.typography.titleSmall)
+                    Text(if (o.status in setOf("placed", "accepted")) "Items to pack" else "Items", style = MaterialTheme.typography.titleSmall)
                     o.items.forEach { i ->
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Surface(shape = RoundedCornerShape(8.dp), color = MaterialTheme.colorScheme.primaryContainer) {
