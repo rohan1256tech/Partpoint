@@ -25,7 +25,7 @@ const get = (url: string, token?: string) =>
   t.app.inject({ method: 'GET', url, ...(token ? { headers: { authorization: `Bearer ${token}` } } : {}) });
 
 const device = { app: 'partpoint', deviceId: 'device-aaaa-1111' } as const;
-const retailerProfile = { role: 'retailer', shopName: 'Sharma Auto Parts' } as const;
+const retailerProfile = { role: 'retailer', shopName: 'Sharma Mobile Repair' } as const;
 
 /** Full phone signup; returns tokens and the user. */
 async function signUpRetailer(phone = '9876543210', d: { app: string; deviceId: string } = device) {
@@ -62,7 +62,7 @@ describe('phone OTP signup and login', () => {
       role: 'retailer',
       status: 'pending',
       phone: '+919876543210',
-      profile: { shopName: 'Sharma Auto Parts' },
+      profile: { shopName: 'Sharma Mobile Repair' },
     });
 
     const [row] = await t.db.select().from(users).where(eq(users.id, user.id));

@@ -127,16 +127,16 @@ describe('banners', () => {
 
   it('shows only live banners in order, and reflects edits immediately', async () => {
     const a = (await http.post('/v1/admin/banners', admin, { title: 'Diwali sale', imageKey, sortOrder: 2 })).json();
-    await http.post('/v1/admin/banners', admin, { title: 'Brakes week', imageKey, sortOrder: 1, linkType: 'category', linkValue: a.id });
+    await http.post('/v1/admin/banners', admin, { title: 'Chargers week', imageKey, sortOrder: 1, linkType: 'category', linkValue: a.id });
     await http.post('/v1/admin/banners', admin, { title: 'Old', imageKey, endsAt: '2020-01-01T00:00:00Z' });
     await http.post('/v1/admin/banners', admin, { title: 'Off', imageKey, isActive: false });
 
     const live = async () => (await http.get('/v1/banners', retailer.token)).json().items.map((b: { title: string }) => b.title);
-    expect(await live()).toEqual(['Brakes week', 'Diwali sale']);
+    expect(await live()).toEqual(['Chargers week', 'Diwali sale']);
     expect((await http.get('/v1/banners', retailer.token)).json().items[1].imageUrl).toBe(`https://img.test/${imageKey}`);
 
     await http.patch(`/v1/admin/banners/${a.id}`, admin, { isActive: false });
-    expect(await live()).toEqual(['Brakes week']);
+    expect(await live()).toEqual(['Chargers week']);
     expect((await http.del(`/v1/admin/banners/${a.id}`, admin)).statusCode).toBe(204);
     const adminList = (await http.get('/v1/admin/banners', admin)).json().items;
     expect(adminList).toHaveLength(3);

@@ -24,7 +24,6 @@ import androidx.compose.material.icons.outlined.CheckCircle
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.LocalOffer
 import androidx.compose.material.icons.outlined.ShoppingCart
-import androidx.compose.material.icons.outlined.Storefront
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -74,6 +73,8 @@ import `in`.partpoint.core.ui.QtyStepper
 import `in`.partpoint.core.ui.RemoteImage
 import `in`.partpoint.core.ui.SavingGreen
 import `in`.partpoint.core.ui.rupees
+import `in`.partpoint.core.ui.partIcon
+import androidx.compose.foundation.clickable
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -142,14 +143,14 @@ fun CartScreen(onBrowse: () -> Unit, onProduct: (String) -> Unit, onCheckout: ()
         topBar = { TopAppBar(title = { Text(if (cart.itemCount > 0) "Cart (${cart.itemCount})" else "Cart") }) },
         snackbarHost = { SnackbarHost(snackbar) },
         bottomBar = {
-            if (cart.groups.isNotEmpty()) {
-                Surface(tonalElevation = 3.dp, shadowElevation = 8.dp) {
-                    Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+            if (cart.lines.isNotEmpty()) {
+                Surface(color = MaterialTheme.colorScheme.surfaceContainerLow, shadowElevation = 12.dp) {
+                    Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
                         Column(Modifier.weight(1f)) {
                             Text(rupees(cart.totalPaise), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
                             Text("Total incl. GST and delivery", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
-                        Button(onClick = onCheckout, enabled = cart.canCheckout) { Text("Checkout") }
+                        Button(onClick = onCheckout, enabled = cart.canCheckout, modifier = Modifier.height(52.dp)) { Text("Checkout") }
                     }
                 }
             }
@@ -157,12 +158,24 @@ fun CartScreen(onBrowse: () -> Unit, onProduct: (String) -> Unit, onCheckout: ()
     ) { padding ->
         when {
             !loaded -> LoadingScreen()
-            cart.groups.isEmpty() -> Column(Modifier.padding(padding)) {
-                MessageState(Icons.Outlined.ShoppingCart, "Your cart is empty", "Browse parts from trusted wholesalers and add them here.", "Start shopping" to onBrowse)
+            cart.lines.isEmpty() -> Column(Modifier.padding(padding)) {
+                MessageState(Icons.Outlined.ShoppingCart, "Your cart is empty", "Add displays, batteries, chargers and more at wholesale prices.", "Start shopping" to onBrowse)
             }
             else -> PullToRefreshBox(isRefreshing = refreshing, onRefresh = { vm.refresh() }, modifier = Modifier.padding(padding)) {
                 LazyColumn(contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxSize()) {
-                    items(cart.groups, key = { it.wholesaler.id }) { g -> GroupCard(g, cart.minOrderPaise, vm, onProduct) }
+                    items(cart.lines, key = { it.variantId }) { line -> LineCard(line, vm, onProduct) }
+                    if (cart.belowMinOrder) {
+                        item {
+                            Surface(shape = RoundedCornerShape(14.dp), color = MaterialTheme.colorScheme.tertiaryContainer) {
+                                Text(
+                                    "Add ${rupees((cart.minOrderPaise - cart.subtotalPaise).coerceAtLeast(0))} more to reach the ${rupees(cart.minOrderPaise)} minimum order.",
+                                    color = MaterialTheme.colorScheme.onTertiaryContainer,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    modifier = Modifier.fillMaxWidth().padding(12.dp),
+                                )
+                            }
+                        }
+                    }
                     item { CouponBox(coupon, cart, vm::applyCoupon) }
                     item { Totals(cart) }
                     if (!cart.canCheckout) {
@@ -175,41 +188,31 @@ fun CartScreen(onBrowse: () -> Unit, onProduct: (String) -> Unit, onCheckout: ()
 }
 
 @Composable
-private fun GroupCard(g: CartGroup, minOrderPaise: Long, vm: CartViewModel, onProduct: (String) -> Unit) {
-    Card(shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)) {
-        Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Outlined.Storefront, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
-                Text(g.wholesaler.businessName, style = MaterialTheme.typography.titleSmall, modifier = Modifier.padding(start = 8.dp).weight(1f))
-                Text(g.wholesaler.city, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
-            g.lines.forEach { line ->
+private fun LineCard(line: CartLine, vm: CartViewModel, onProduct: (String) -> Unit) {
+    Card(shape = RoundedCornerShape(18.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)) {
+        Row(Modifier.padding(12.dp), verticalAlignment = Alignment.Top) {
+            RemoteImage(line.thumbnailUrl, Modifier.size(76.dp), corner = 14.dp, fallback = partIcon(line.productName))
+            Column(Modifier.padding(start = 12.dp).weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 Row(verticalAlignment = Alignment.Top) {
-                    RemoteImage(line.thumbnailUrl, Modifier.size(64.dp).then(Modifier), corner = 10.dp)
-                    Column(Modifier.padding(start = 12.dp).weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                        TextButton(onClick = { onProduct(line.productId) }, contentPadding = PaddingValues(0.dp), modifier = Modifier.height(24.dp)) {
-                            Text(line.productName, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                        }
-                        Text("${line.variantName} · ${rupees(line.unitPricePaise)} each", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        issueText(line)?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error) }
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            QtyStepper(line.qty, { vm.setQty(line.variantId, it) }, min = line.minOrderQty.coerceAtLeast(1), max = line.stockQty.coerceAtLeast(line.qty))
-                            Spacer(Modifier.weight(1f))
-                            Text(rupees(line.lineTotalPaise), style = MaterialTheme.typography.titleSmall)
-                            IconButton(onClick = { vm.remove(line.variantId) }) { Icon(Icons.Outlined.Delete, contentDescription = "Remove ${line.productName}") }
-                        }
+                    Text(
+                        line.productName,
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f).clickable(role = Role.Button) { onProduct(line.productId) },
+                    )
+                    IconButton(onClick = { vm.remove(line.variantId) }, modifier = Modifier.size(32.dp)) {
+                        Icon(Icons.Outlined.Delete, contentDescription = "Remove ${line.productName}", tint = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
-            }
-            if (g.belowMinOrder) {
-                Text(
-                    "Add ${rupees((minOrderPaise - g.subtotalPaise).coerceAtLeast(0))} more from this seller to reach the ${rupees(minOrderPaise)} minimum.",
-                    color = MaterialTheme.colorScheme.error,
-                    style = MaterialTheme.typography.bodySmall,
-                )
-            }
-            if (g.deliveryFeePaise > 0) {
-                Text("Delivery from this seller: ${rupees(g.deliveryFeePaise)}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text("${line.variantName} · ${rupees(line.unitPricePaise)} each", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                issueText(line)?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error) }
+                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 4.dp)) {
+                    QtyStepper(line.qty, { vm.setQty(line.variantId, it) }, min = line.minOrderQty.coerceAtLeast(1), max = line.stockQty.coerceAtLeast(line.qty))
+                    Spacer(Modifier.weight(1f))
+                    Text(rupees(line.lineTotalPaise), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                }
             }
         }
     }
@@ -247,13 +250,16 @@ private fun CouponBox(applied: String?, cart: Cart, apply: (String?) -> Unit) {
 
 @Composable
 private fun Totals(cart: Cart) {
-    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        MoneyRow("Items", cart.subtotalPaise)
-        if (cart.discountPaise > 0) MoneyRow("Coupon discount", -cart.discountPaise, color = SavingGreen)
-        MoneyRow("Delivery", cart.deliveryFeePaise, freeWhenZero = true)
-        HorizontalDivider()
-        MoneyRow("Total", cart.totalPaise, bold = true)
-        Text("Prices include GST. You get a GST invoice for each seller.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    Surface(shape = RoundedCornerShape(18.dp), color = MaterialTheme.colorScheme.surfaceContainerLow) {
+        Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text("Bill details", style = MaterialTheme.typography.titleSmall)
+            MoneyRow("Items (${cart.itemCount})", cart.subtotalPaise)
+            if (cart.discountPaise > 0) MoneyRow("Coupon discount", -cart.discountPaise, color = SavingGreen)
+            MoneyRow("Delivery", cart.deliveryFeePaise, freeWhenZero = true)
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+            MoneyRow("To pay", cart.totalPaise, bold = true)
+            Text("Prices include GST. A GST invoice comes with your order.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
     }
 }
 
@@ -285,13 +291,11 @@ class CheckoutViewModel @Inject constructor(private val api: ShopApi, val cart: 
 
     override suspend fun fetch() = CheckoutData(api.addresses().items)
 
-    /** Places the order; returns (order number, seller name, total) per seller for the confirmation. */
-    suspend fun place(addressId: String): List<Triple<String, String, Long>> {
-        // Seller names come from the cart the retailer just reviewed; the reply carries only seller ids.
-        val sellers = cart.cart.value.groups.associate { it.wholesaler.id to it.wholesaler.businessName }
+    /** Places the order with Partpoint; returns it for the confirmation screen. */
+    suspend fun place(addressId: String): PlacedOrder {
         val placed = apiCall { api.placeOrder(PlaceOrderBody(addressId, idempotencyKey, cart.couponCode.value)) }
         cart.clearLocal()
-        return placed.orders.map { Triple(it.orderNumber, sellers[it.wholesalerId] ?: "Seller", it.totalPaise) }
+        return placed.orders.first()
     }
 
     suspend fun addAddress(input: AddressInput): Address {
@@ -303,7 +307,7 @@ class CheckoutViewModel @Inject constructor(private val api: ShopApi, val cart: 
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun CheckoutScreen(onBack: () -> Unit, onPlaced: (List<Triple<String, String, Long>>) -> Unit, vm: CheckoutViewModel = hiltViewModel()) {
+fun CheckoutScreen(onBack: () -> Unit, onPlaced: (PlacedOrder) -> Unit, vm: CheckoutViewModel = hiltViewModel()) {
     val state by vm.state.collectAsStateWithLifecycle()
     val cart by vm.cart.cart.collectAsStateWithLifecycle()
     var selected by rememberSaveable { mutableStateOf<String?>(null) }
@@ -361,17 +365,12 @@ fun CheckoutScreen(onBack: () -> Unit, onPlaced: (List<Triple<String, String, Lo
                         }
                         item {
                             Text("Order summary", style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(top = 8.dp))
-                            Text(
-                                "${cart.itemCount} item(s) from ${cart.groups.size} seller(s). Each seller packs and delivers separately.",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
                         }
                         item { Totals(cart) }
                         item {
                             Surface(shape = RoundedCornerShape(12.dp), color = MaterialTheme.colorScheme.secondaryContainer) {
                                 Text(
-                                    "Payment: pay the seller on delivery or as agreed. Online payment is coming soon.",
+                                    "Payment: pay on delivery or as agreed with Partpoint. Online payment is coming soon.",
                                     style = MaterialTheme.typography.bodySmall,
                                     modifier = Modifier.padding(12.dp),
                                 )
@@ -500,25 +499,30 @@ private fun Field(
     )
 }
 
-/** Shown after placing: one order per seller. */
+/** Shown after placing the order. */
 @Composable
-fun OrderPlacedScreen(placed: List<Triple<String, String, Long>>, onViewOrders: () -> Unit, onContinue: () -> Unit) {
+fun OrderPlacedScreen(orderNumber: String, totalPaise: Long, onViewOrders: () -> Unit, onContinue: () -> Unit) {
     Surface(Modifier.fillMaxSize()) {
         Column(Modifier.padding(24.dp), verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) {
-            Icon(Icons.Outlined.CheckCircle, null, tint = SavingGreen, modifier = Modifier.size(72.dp))
-            Text("Order placed", style = MaterialTheme.typography.headlineSmall, modifier = Modifier.padding(top = 16.dp))
+            Surface(shape = androidx.compose.foundation.shape.CircleShape, color = SavingGreen.copy(alpha = 0.14f)) {
+                Icon(Icons.Outlined.CheckCircle, null, tint = SavingGreen, modifier = Modifier.padding(18.dp).size(64.dp))
+            }
+            Text("Order placed", style = MaterialTheme.typography.headlineSmall, modifier = Modifier.padding(top = 20.dp))
             Text(
-                if (placed.size > 1) "${placed.size} orders, one per seller. Each seller will accept and pack your order, and you'll be notified at every step." else "The seller will accept and pack your order. You'll be notified at every step.",
+                "$orderNumber · ${rupees(totalPaise)}",
+                style = MaterialTheme.typography.titleSmall,
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.padding(top = 6.dp),
+            )
+            Text(
+                "Partpoint is confirming stock and will pack your order. We will notify you at every step, and you get a delivery code when it is on the way.",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-                modifier = Modifier.padding(top = 8.dp),
+                modifier = Modifier.padding(top = 10.dp),
             )
-            placed.forEach { (number, seller, total) ->
-                Text("$number · $seller · ${rupees(total)}", style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(top = 6.dp))
-            }
-            Spacer(Modifier.height(24.dp))
-            PrimaryButton("Track my orders", onClick = onViewOrders)
+            Spacer(Modifier.height(28.dp))
+            PrimaryButton("Track my order", onClick = onViewOrders)
             TextButton(onClick = onContinue) { Text("Continue shopping") }
         }
     }

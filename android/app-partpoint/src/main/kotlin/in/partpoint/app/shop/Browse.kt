@@ -2,10 +2,12 @@ package `in`.partpoint.app.shop
 
 import `in`.partpoint.core.ui.Load
 import `in`.partpoint.core.ui.LoadingViewModel
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -15,6 +17,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.grid.GridCells
@@ -30,14 +33,17 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
+import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowRight
+import androidx.compose.material.icons.outlined.LocalShipping
+import androidx.compose.material.icons.outlined.ReceiptLong
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.SearchOff
 import androidx.compose.material.icons.outlined.Star
+import androidx.compose.material.icons.outlined.Verified
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -60,8 +66,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.layout
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
@@ -71,11 +80,17 @@ import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import `in`.partpoint.core.network.ApiException
 import `in`.partpoint.core.network.apiCall
+import `in`.partpoint.core.ui.BrandColors
+import `in`.partpoint.core.ui.BrandGradient
 import `in`.partpoint.core.ui.ErrorState
 import `in`.partpoint.core.ui.LoadingScreen
 import `in`.partpoint.core.ui.MessageState
 import `in`.partpoint.core.ui.PriceLine
 import `in`.partpoint.core.ui.RemoteImage
+import `in`.partpoint.core.ui.SectionHeader
+import `in`.partpoint.core.ui.Wordmark
+import `in`.partpoint.core.ui.discountPercent
+import `in`.partpoint.core.ui.partIcon
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
@@ -89,6 +104,8 @@ import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
+
+const val SEARCH_HINT = "Search displays, batteries, chargers…"
 
 // ------------------------------------------------------------------------------------- home
 
@@ -123,20 +140,24 @@ fun HomeScreen(onSearch: () -> Unit, onCategory: (Category) -> Unit, onBrand: (B
     val grid = rememberLazyGridState()
     LoadMoreWhenNearEnd(grid) { vm.feed.loadMore() }
 
-    Scaffold(topBar = { TopAppBar(title = { Text("Partpoint", fontWeight = FontWeight.Bold) }) }) { padding ->
+    Scaffold { padding ->
         when (val s = state) {
-            Load.Loading -> LoadingScreen()
+            Load.Loading -> Column(Modifier.fillMaxSize()) {
+                HomeHeader(onSearch, Modifier)
+                LoadingScreen()
+            }
             is Load.Failed -> ErrorState(s.message) { vm.reload() }
-            is Load.Ready -> PullToRefreshBox(isRefreshing = refreshing, onRefresh = vm::refreshAll, modifier = Modifier.padding(padding)) {
+            is Load.Ready -> PullToRefreshBox(isRefreshing = refreshing, onRefresh = vm::refreshAll, modifier = Modifier.padding(bottom = padding.calculateBottomPadding())) {
                 LazyVerticalGrid(
                     columns = GridCells.Adaptive(minSize = 160.dp),
                     state = grid,
-                    contentPadding = PaddingValues(16.dp),
+                    contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 16.dp),
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp),
                     modifier = Modifier.fillMaxSize(),
                 ) {
-                    item(span = { GridItemSpan(maxLineSpan) }) { SearchBarButton(onSearch) }
+                    item(span = { GridItemSpan(maxLineSpan) }) { HomeHeader(onSearch, Modifier.bleed(16.dp)) }
+                    item(span = { GridItemSpan(maxLineSpan) }) { TrustStrip() }
                     if (s.data.banners.isNotEmpty()) {
                         item(span = { GridItemSpan(maxLineSpan) }) {
                             BannerCarousel(s.data.banners) { b ->
@@ -149,26 +170,52 @@ fun HomeScreen(onSearch: () -> Unit, onCategory: (Category) -> Unit, onBrand: (B
                         }
                     }
                     if (s.data.categories.isNotEmpty()) {
-                        item(span = { GridItemSpan(maxLineSpan) }) { SectionTitle("Shop by category") }
+                        // Shoppers think in part types (displays, batteries…), so show subcategories first.
+                        val tiles = s.data.categories.flatMap { it.children.ifEmpty { listOf(it) } }
+                        item(span = { GridItemSpan(maxLineSpan) }) { SectionHeader("Shop by category") }
                         item(span = { GridItemSpan(maxLineSpan) }) {
-                            LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                                items(s.data.categories, key = { it.id }) { c -> CategoryTile(c) { onCategory(c) } }
+                            LazyRow(Modifier.bleed(16.dp), contentPadding = PaddingValues(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                                items(tiles, key = { it.id }) { c -> CategoryTile(c) { onCategory(c) } }
                             }
                         }
                     }
                     if (s.data.brands.isNotEmpty()) {
+                        item(span = { GridItemSpan(maxLineSpan) }) { SectionHeader("Popular brands") }
                         item(span = { GridItemSpan(maxLineSpan) }) {
-                            LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                items(s.data.brands, key = { it.id }) { b ->
-                                    FilterChip(selected = false, onClick = { onBrand(b) }, label = { Text(b.name) })
-                                }
+                            LazyRow(Modifier.bleed(16.dp), contentPadding = PaddingValues(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                                items(s.data.brands, key = { it.id }) { b -> BrandChip(b) { onBrand(b) } }
                             }
                         }
                     }
-                    item(span = { GridItemSpan(maxLineSpan) }) { SectionTitle("Products") }
+                    item(span = { GridItemSpan(maxLineSpan) }) { SectionHeader("Fresh in stock") }
                     productItems(feed, onProduct, onRetry = vm.feed::loadMore)
                 }
             }
+        }
+    }
+}
+
+/** Lets a grid item span the grid's side padding, edge to edge. */
+private fun Modifier.bleed(side: androidx.compose.ui.unit.Dp) = layout { measurable, constraints ->
+    val extra = side.roundToPx() * 2
+    val placeable = measurable.measure(constraints.copy(minWidth = constraints.minWidth + extra, maxWidth = constraints.maxWidth + extra))
+    layout(placeable.width - extra, placeable.height) { placeable.place(-extra / 2, 0) }
+}
+
+/** Brand sweep with the logo, a promise line and the search bar. */
+@Composable
+private fun HomeHeader(onSearch: () -> Unit, modifier: Modifier) {
+    Box(
+        modifier.fillMaxWidth().background(BrandGradient, RoundedCornerShape(bottomStart = 28.dp, bottomEnd = 28.dp)),
+    ) {
+        Column(Modifier.statusBarsPadding().padding(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Wordmark(color = Color.White, markSize = 30.dp)
+            Text(
+                "Mobile spare parts and accessories at wholesale prices, delivered to your shop.",
+                color = Color.White.copy(alpha = 0.9f),
+                style = MaterialTheme.typography.bodyMedium,
+            )
+            SearchBarButton(onSearch)
         }
     }
 }
@@ -177,31 +224,48 @@ fun HomeScreen(onSearch: () -> Unit, onCategory: (Category) -> Unit, onBrand: (B
 private fun SearchBarButton(onClick: () -> Unit) {
     Surface(
         onClick = onClick,
-        shape = RoundedCornerShape(28.dp),
-        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+        shape = RoundedCornerShape(16.dp),
+        color = MaterialTheme.colorScheme.surfaceContainerLowest,
+        shadowElevation = 2.dp,
         modifier = Modifier.fillMaxWidth().height(52.dp),
     ) {
         Row(Modifier.padding(horizontal = 16.dp), verticalAlignment = Alignment.CenterVertically) {
-            Icon(Icons.Outlined.Search, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+            Icon(Icons.Outlined.Search, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
             Spacer(Modifier.width(12.dp))
-            Text("Search parts, part numbers, brands", color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(SEARCH_HINT, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
 }
 
 @Composable
-private fun SectionTitle(text: String) = Text(text, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = 8.dp))
+private fun TrustStrip(modifier: Modifier = Modifier) {
+    Row(modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        TrustItem(Icons.Outlined.Verified, "Tested parts", Modifier.weight(1f))
+        TrustItem(Icons.Outlined.ReceiptLong, "GST invoice", Modifier.weight(1f))
+        TrustItem(Icons.Outlined.LocalShipping, "Fast delivery", Modifier.weight(1f))
+    }
+}
 
 @Composable
-private fun BannerCarousel(banners: List<Banner>, onOpen: (Banner) -> Unit) {
+private fun TrustItem(icon: ImageVector, text: String, modifier: Modifier) {
+    Surface(modifier, shape = RoundedCornerShape(14.dp), color = MaterialTheme.colorScheme.surfaceContainerLow) {
+        Row(Modifier.padding(horizontal = 10.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            Icon(icon, null, tint = MaterialTheme.colorScheme.secondary, modifier = Modifier.size(18.dp))
+            Text(text, style = MaterialTheme.typography.labelMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        }
+    }
+}
+
+@Composable
+private fun BannerCarousel(banners: List<Banner>, modifier: Modifier = Modifier, onOpen: (Banner) -> Unit) {
     val pager = rememberPagerState { banners.size }
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+    Column(modifier, horizontalAlignment = Alignment.CenterHorizontally) {
         HorizontalPager(state = pager, pageSpacing = 12.dp) { page ->
             val b = banners[page]
             RemoteImage(
                 b.imageUrl,
                 modifier = Modifier.fillMaxWidth().aspectRatio(2.2f).clickable(enabled = b.linkType != "none", role = Role.Button, onClickLabel = b.title) { onOpen(b) },
-                corner = 16.dp,
+                corner = 20.dp,
             )
         }
         if (banners.size > 1) {
@@ -211,7 +275,7 @@ private fun BannerCarousel(banners: List<Banner>, onOpen: (Banner) -> Unit) {
                     Surface(
                         shape = CircleShape,
                         color = if (current) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant,
-                        modifier = Modifier.size(if (current) 8.dp else 6.dp),
+                        modifier = Modifier.size(width = if (current) 18.dp else 6.dp, height = 6.dp),
                     ) {}
                 }
             }
@@ -225,20 +289,37 @@ private fun CategoryTile(c: Category, onClick: () -> Unit) {
         Modifier.width(84.dp).clickable(role = Role.Button, onClick = onClick),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        RemoteImage(c.imageUrl, Modifier.size(72.dp), corner = 20.dp)
+        RemoteImage(c.imageUrl, Modifier.size(72.dp), corner = 22.dp, fallback = partIcon(c.name))
         Text(
             c.name,
             style = MaterialTheme.typography.labelMedium,
             maxLines = 2,
+            textAlign = TextAlign.Center,
             overflow = TextOverflow.Ellipsis,
             modifier = Modifier.padding(top = 6.dp),
         )
     }
 }
 
+@Composable
+private fun BrandChip(b: Brand, onClick: () -> Unit) {
+    Surface(onClick = onClick, shape = RoundedCornerShape(14.dp), color = MaterialTheme.colorScheme.surfaceContainerLow, border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)) {
+        Row(Modifier.padding(start = 6.dp, end = 14.dp, top = 6.dp, bottom = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+            if (b.logoUrl != null) {
+                RemoteImage(b.logoUrl, Modifier.size(28.dp), corner = 8.dp, contentScale = androidx.compose.ui.layout.ContentScale.Fit)
+            } else {
+                Box(Modifier.size(28.dp).background(MaterialTheme.colorScheme.primaryContainer, RoundedCornerShape(8.dp)), contentAlignment = Alignment.Center) {
+                    Text(b.name.take(1), color = MaterialTheme.colorScheme.onPrimaryContainer, fontWeight = FontWeight.Bold)
+                }
+            }
+            Text(b.name, style = MaterialTheme.typography.labelLarge, modifier = Modifier.padding(start = 8.dp))
+        }
+    }
+}
+
 // ------------------------------------------------------------------------------------- product feed (paged)
 
-data class ProductQuery(val q: String? = null, val categoryId: String? = null, val brandId: String? = null, val wholesalerId: String? = null)
+data class ProductQuery(val q: String? = null, val categoryId: String? = null, val brandId: String? = null)
 
 data class FeedState(
     val items: List<ProductSummary> = emptyList(),
@@ -277,7 +358,7 @@ class ProductFeed @Inject constructor(private val api: ShopApi) {
         job = scope.launch {
             _state.update { it.copy(loading = true, error = null) }
             try {
-                val page = apiCall { api.products(query.q, query.categoryId, query.brandId, query.wholesalerId, cursor) }
+                val page = apiCall { api.products(query.q, query.categoryId, query.brandId, cursor) }
                 cursor = page.nextCursor
                 _state.update { it.copy(items = it.items + page.items, loading = false, endReached = page.nextCursor == null, initialLoadDone = true) }
             } catch (e: ApiException) {
@@ -318,34 +399,45 @@ fun androidx.compose.foundation.lazy.grid.LazyGridScope.productItems(feed: FeedS
 }
 
 @Composable
-fun ProductCard(p: ProductSummary, onClick: () -> Unit) {
+fun ProductCard(p: ProductSummary, modifier: Modifier = Modifier, onClick: () -> Unit) {
+    val off = discountPercent(p.mrpPaise, p.minPricePaise)
     Card(
         onClick = onClick,
-        shape = RoundedCornerShape(16.dp),
+        modifier = modifier,
+        shape = RoundedCornerShape(18.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
     ) {
         Box {
-            RemoteImage(p.thumbnailUrl, Modifier.fillMaxWidth().aspectRatio(1f), corner = 16.dp)
+            RemoteImage(p.thumbnailUrl, Modifier.fillMaxWidth().aspectRatio(1f).padding(6.dp), corner = 14.dp, fallback = partIcon(p.name, p.categoryName))
             if (p.totalStock <= 0) {
-                Surface(color = Color.Black.copy(alpha = 0.6f), shape = RoundedCornerShape(bottomEnd = 12.dp, topStart = 16.dp)) {
+                Surface(color = Color.Black.copy(alpha = 0.62f), shape = RoundedCornerShape(10.dp), modifier = Modifier.padding(12.dp)) {
                     Text("Out of stock", color = Color.White, style = MaterialTheme.typography.labelSmall, modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp))
+                }
+            } else if (off != null && off >= 5) {
+                Surface(color = BrandColors.Amber, shape = RoundedCornerShape(10.dp), modifier = Modifier.padding(12.dp)) {
+                    Text("$off% off", color = BrandColors.Ink, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp))
                 }
             }
         }
-        Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            Text(p.name, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium, maxLines = 2, overflow = TextOverflow.Ellipsis)
+        Column(Modifier.padding(start = 12.dp, end = 12.dp, bottom = 12.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
             Text(
-                listOfNotNull(p.brandName, p.wholesaler.businessName).joinToString(" · "),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                listOfNotNull(p.brandName, p.categoryName).joinToString(" · ").ifEmpty { " " },
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.primary,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
-            if (p.minPricePaise != null) PriceLine(p.minPricePaise, p.mrpPaise, Modifier.padding(top = 4.dp))
-            if (p.ratingCount > 0) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Outlined.Star, contentDescription = null, tint = Color(0xFFF59E0B), modifier = Modifier.size(14.dp))
+            Text(p.name, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium, maxLines = 2, overflow = TextOverflow.Ellipsis, minLines = 2)
+            if (p.minPricePaise != null) PriceLine(p.minPricePaise, p.mrpPaise, Modifier.padding(top = 4.dp), showOff = false)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                if (p.ratingCount > 0) {
+                    Icon(Icons.Outlined.Star, contentDescription = null, tint = BrandColors.Amber, modifier = Modifier.size(14.dp))
                     Text(" %.1f (%d)".format(p.ratingAvg, p.ratingCount), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Spacer(Modifier.weight(1f))
+                }
+                if (p.totalStock > 0) {
+                    Text("In stock", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.secondary, fontWeight = FontWeight.SemiBold)
                 }
             }
         }
@@ -404,7 +496,7 @@ fun ProductListScreen(title: String?, query: ProductQuery, onBack: () -> Unit, o
                                 text = it
                                 vm.onQuery(it)
                             },
-                            placeholder = { Text("Search parts, part numbers, brands") },
+                            placeholder = { Text(SEARCH_HINT) },
                             singleLine = true,
                             colors = TextFieldDefaults.colors(
                                 focusedContainerColor = Color.Transparent,
@@ -423,7 +515,7 @@ fun ProductListScreen(title: String?, query: ProductQuery, onBack: () -> Unit, o
     ) { padding ->
         if (isSearch && text.trim().length < 2) {
             Box(Modifier.padding(padding)) {
-                MessageState(Icons.Outlined.Search, "Find the right part", "Type a part name, part number or brand, e.g. \"oil filter\" or \"VA-OF-125\".")
+                MessageState(Icons.Outlined.Search, "Find the right part", "Type a part, phone model or brand, e.g. \"Note 12 battery\" or \"20W charger\".")
             }
         } else {
             LazyVerticalGrid(
@@ -461,22 +553,24 @@ fun CategoriesScreen(onCategory: (Category) -> Unit, vm: CategoriesViewModel = h
             is Load.Failed -> ErrorState(s.message) { vm.reload() }
             is Load.Ready -> androidx.compose.foundation.lazy.LazyColumn(
                 contentPadding = PaddingValues(16.dp),
-                verticalArrangement = Arrangement.spacedBy(20.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp),
                 modifier = Modifier.padding(padding),
             ) {
                 items(s.data, key = { it.id }) { top ->
-                    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                        Row(
-                            Modifier.fillMaxWidth().clickable(role = Role.Button) { onCategory(top) },
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            RemoteImage(top.imageUrl, Modifier.size(44.dp), corner = 12.dp)
-                            Text(top.name, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(start = 12.dp).weight(1f))
-                            Text("See all", color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.labelLarge)
-                        }
-                        if (top.children.isNotEmpty()) {
-                            androidx.compose.foundation.layout.FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                                top.children.forEach { c -> FilterChip(selected = false, onClick = { onCategory(c) }, label = { Text(c.name) }) }
+                    Card(shape = RoundedCornerShape(20.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)) {
+                        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                            Row(
+                                Modifier.fillMaxWidth().clickable(role = Role.Button) { onCategory(top) },
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                Text(top.name, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+                                Text("See all", color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.labelLarge)
+                                Icon(Icons.AutoMirrored.Outlined.KeyboardArrowRight, null, tint = MaterialTheme.colorScheme.primary)
+                            }
+                            if (top.children.isNotEmpty()) {
+                                FlowRow(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalArrangement = Arrangement.spacedBy(14.dp), maxItemsInEachRow = 4) {
+                                    top.children.forEach { c -> CategoryTile(c) { onCategory(c) } }
+                                }
                             }
                         }
                     }

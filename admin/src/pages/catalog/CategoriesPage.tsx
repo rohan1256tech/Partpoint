@@ -85,7 +85,7 @@ export function CategoriesPage() {
       {isLoading ? (
         <Loader />
       ) : tops.length === 0 ? (
-        <EmptyState icon={IconCategory} title="No categories yet">Categories are the first thing retailers see. Create top-level ones like Engine or Brakes, then sub-categories.</EmptyState>
+        <EmptyState icon={IconCategory} title="No categories yet">Categories are the first thing retailers see. Create top-level ones like Mobile spare parts or Mobile accessories, then sub-categories such as Displays or Chargers.</EmptyState>
       ) : (
         <Table highlightOnHover>
           <Table.Thead>

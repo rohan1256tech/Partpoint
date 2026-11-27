@@ -49,10 +49,10 @@ import kotlin.reflect.KClass
 @Serializable data object OrdersTab
 @Serializable data object AccountTab
 @Serializable data object Search
-@Serializable data class Products(val title: String, val categoryId: String? = null, val brandId: String? = null, val wholesalerId: String? = null)
+@Serializable data class Products(val title: String, val categoryId: String? = null, val brandId: String? = null)
 @Serializable data class Product(val id: String)
 @Serializable data object Checkout
-@Serializable data class Placed(val numbers: List<String>, val sellers: List<String>, val totals: List<Long>)
+@Serializable data class Placed(val number: String, val total: Long)
 @Serializable data class Order(val id: String)
 @Serializable data object Addresses
 @Serializable data object Wishlist
@@ -123,23 +123,22 @@ fun RetailerApp(me: Me, shell: RetailerShellViewModel = hiltViewModel()) {
             composable<Search> { ProductListScreen(title = null, query = ProductQuery(), onBack = { nav.popBackStack() }, onProduct = openProduct) }
             composable<Products> { e ->
                 val r = e.toRoute<Products>()
-                ProductListScreen(r.title, ProductQuery(categoryId = r.categoryId, brandId = r.brandId, wholesalerId = r.wholesalerId), onBack = { nav.popBackStack() }, onProduct = openProduct)
+                ProductListScreen(r.title, ProductQuery(categoryId = r.categoryId, brandId = r.brandId), onBack = { nav.popBackStack() }, onProduct = openProduct)
             }
             composable<Product> {
                 ProductScreen(
                     onBack = { nav.popBackStack() },
                     onOpenCart = { nav.switchTab(CartTab) },
-                    onWholesaler = { w -> nav.navigate(Products(w.businessName, wholesalerId = w.id)) },
                 )
             }
             composable<Checkout> {
                 CheckoutScreen(onBack = { nav.popBackStack() }, onPlaced = { placed ->
-                    nav.navigate(Placed(placed.map { it.first }, placed.map { it.second }, placed.map { it.third })) { popUpTo(CartTab) }
+                    nav.navigate(Placed(placed.orderNumber, placed.totalPaise)) { popUpTo(CartTab) }
                 })
             }
             composable<Placed> { e ->
                 val p = e.toRoute<Placed>()
-                OrderPlacedScreen(p.numbers.indices.map { i -> Triple(p.numbers[i], p.sellers[i], p.totals[i]) }, onViewOrders = { nav.switchTab(OrdersTab) }, onContinue = { nav.switchTab(HomeTab) })
+                OrderPlacedScreen(p.number, p.total, onViewOrders = { nav.switchTab(OrdersTab) }, onContinue = { nav.switchTab(HomeTab) })
             }
             composable<Order> { OrderDetailScreen(onBack = { nav.popBackStack() }, onProduct = openProduct) }
             composable<Addresses> { AddressesScreen(onBack = { nav.popBackStack() }) }

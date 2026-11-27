@@ -69,14 +69,14 @@ export function AnnouncementsPage() {
               value={title}
               onChange={(e) => setTitle(e.currentTarget.value.slice(0, 60))}
               description={`${title.length}/60`}
-              placeholder="Diwali offer on brake parts"
+              placeholder="Diwali offer on chargers"
             />
             <Textarea
               label="Message"
               value={body}
               onChange={(e) => setBody(e.currentTarget.value.slice(0, 200))}
               description={`${body.length}/200`}
-              placeholder="10% off all brake pads and shoes until Sunday. Use code DIWALI10."
+              placeholder="10% off all chargers and cables until Sunday. Use code DIWALI10."
               autosize
               minRows={3}
             />

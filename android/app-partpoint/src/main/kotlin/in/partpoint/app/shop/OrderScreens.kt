@@ -122,7 +122,7 @@ fun OrdersScreen(onOrder: (String) -> Unit, onBrowse: () -> Unit, vm: OrdersView
                 PullToRefreshBox(isRefreshing = refreshing, onRefresh = { vm.reload(pullToRefresh = true) }, modifier = Modifier.padding(padding)) {
                     val (ongoing, past) = s.data.partition { it.status !in setOf("delivered", "cancelled") }
                     LazyColumn(contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxSize()) {
-                        item { NotificationPrompt("retailer_orders", "Know when your parts are on the way", "Get a notification when the seller accepts, the rider picks up and your order arrives.") }
+                        item { NotificationPrompt("retailer_orders", "Know when your parts are on the way", "Get a notification when we confirm your order, when it is on the way and when it arrives.") }
                         if (ongoing.isNotEmpty()) {
                             item { Text("In progress", style = MaterialTheme.typography.titleSmall) }
                             items(ongoing, key = { it.id }) { OrderRow(it) { onOrder(it.id) } }
@@ -140,22 +140,28 @@ fun OrdersScreen(onOrder: (String) -> Unit, onBrowse: () -> Unit, vm: OrdersView
 
 @Composable
 private fun OrderRow(o: OrderSummary, onClick: () -> Unit) {
-    Card(onClick = onClick, shape = RoundedCornerShape(14.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)) {
-        Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(o.wholesaler.businessName, style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f))
-                StatusPill(friendlyStatus(o.status), orderStatusColor(o.status))
+    Card(onClick = onClick, shape = RoundedCornerShape(18.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)) {
+        Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
+            Surface(shape = RoundedCornerShape(14.dp), color = orderStatusColor(o.status).copy(alpha = 0.12f), modifier = Modifier.size(48.dp)) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(Icons.Outlined.Inventory2, null, tint = orderStatusColor(o.status))
+                }
             }
-            Text("${o.itemCount} item(s) · ${rupees(o.totalPaise)}", style = MaterialTheme.typography.bodyMedium)
-            Text("${o.orderNumber} · ${dateTime(o.createdAt)}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Column(Modifier.padding(start = 12.dp).weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Text(o.orderNumber, style = MaterialTheme.typography.titleSmall)
+                Text("${o.itemCount} item(s) · ${rupees(o.totalPaise)}", style = MaterialTheme.typography.bodyMedium)
+                Text(dateTime(o.createdAt), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            StatusPill(friendlyStatus(o.status), orderStatusColor(o.status))
         }
     }
 }
 
 /** Retailer-facing wording for each status. */
 fun friendlyStatus(status: String) = when (status) {
-    "placed" -> "Waiting for seller"
-    "accepted" -> "Accepted"
+    "placed" -> "Order placed"
+    "forwarded" -> "Confirming stock"
+    "accepted" -> "Confirmed"
     "packed" -> "Packed"
     "assigned" -> "Rider assigned"
     "picked_up", "out_for_delivery" -> "On the way"
@@ -198,9 +204,9 @@ class OrderDetailViewModel @Inject constructor(
     }
 }
 
-private val STEPS = listOf("placed" to "Placed", "accepted" to "Accepted", "packed" to "Packed", "picked_up" to "On the way", "delivered" to "Delivered")
+private val STEPS = listOf("placed" to "Placed", "accepted" to "Confirmed", "packed" to "Packed", "picked_up" to "On the way", "delivered" to "Delivered")
 private fun stepIndex(status: String) = when (status) {
-    "placed" -> 0
+    "placed", "forwarded" -> 0
     "accepted" -> 1
     "packed", "assigned" -> 2
     "picked_up", "out_for_delivery" -> 3
@@ -237,10 +243,19 @@ fun OrderDetailScreen(onBack: () -> Unit, onProduct: (String) -> Unit, vm: Order
                 Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Column(Modifier.weight(1f)) {
-                            Text(o.wholesaler.businessName, style = MaterialTheme.typography.titleMedium)
+                            Text("Partpoint order", style = MaterialTheme.typography.titleMedium)
                             Text("Placed ${dateTime(o.createdAt)}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                         StatusPill(friendlyStatus(o.status), orderStatusColor(o.status))
+                    }
+                    if (o.siblings.isNotEmpty()) {
+                        Surface(shape = RoundedCornerShape(14.dp), color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.45f)) {
+                            Text(
+                                "Your purchase ships in ${o.siblings.size + 1} parcels. The other parcel${if (o.siblings.size > 1) "s are" else " is"} ${o.siblings.joinToString { it.orderNumber }}, tracked separately under My orders.",
+                                style = MaterialTheme.typography.bodySmall,
+                                modifier = Modifier.padding(12.dp),
+                            )
+                        }
                     }
 
                     if (o.status == "cancelled") {
@@ -317,7 +332,7 @@ fun OrderDetailScreen(onBack: () -> Unit, onProduct: (String) -> Unit, vm: Order
                                 Text(if (invoiceBusy) "Downloading…" else "GST invoice")
                             }
                         }
-                        if (o.status == "placed") { // the server allows retailer cancellation only before the seller accepts
+                        if (o.status == "placed" || o.status == "forwarded") { // the server allows retailer cancellation until the order is confirmed
                             TextButton(onClick = { confirmCancel = true }) { Text("Cancel order", color = MaterialTheme.colorScheme.error) }
                         }
                     }

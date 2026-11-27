@@ -93,7 +93,7 @@ private fun SignedOutFlow(notice: String?) {
                 SignedOutNotice(notice)
                 LoginScreen(
                     appTitle = "Partpoint Delivery",
-                    tagline = "Deliver spare-part orders from wholesalers to shops near you.",
+                    tagline = "Deliver Partpoint orders of mobile parts and accessories to shops near you.",
                     onNeedsSignup = { phone, token -> nav.navigate(Signup(phone, token)) { launchSingleTop = true } },
                 )
             }

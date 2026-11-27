@@ -97,7 +97,7 @@ import javax.inject.Inject
 
 /** The seller's work queue, by what they have to do next. */
 enum class SellerTab(val label: String, val status: String?, val scope: Set<String>) {
-    NEW("New", "placed", setOf("placed")),
+    NEW("New", "forwarded", setOf("forwarded")),
     TO_PACK("To pack", "accepted", setOf("accepted")),
     READY("Ready for pickup", "packed", setOf("packed", "assigned")),
     ON_THE_WAY("On the way", null, setOf("picked_up", "out_for_delivery")),
@@ -105,7 +105,7 @@ enum class SellerTab(val label: String, val status: String?, val scope: Set<Stri
 }
 
 fun sellerStatus(status: String) = when (status) {
-    "placed" -> "New"
+    "forwarded" -> "New"
     "accepted" -> "To pack"
     "packed" -> "Waiting for rider"
     "assigned" -> "Rider assigned"
@@ -237,7 +237,18 @@ class SellerOrderViewModel @Inject constructor(
 
     fun accept(onError: (String) -> Unit) = act(onError) { api.accept(id) }
     fun pack(onError: (String) -> Unit) = act(onError) { api.pack(id) }
-    fun reject(reason: String, onError: (String) -> Unit) = act(onError) { api.reject(id, RejectBody(reason)) }
+    /** The order goes back to Partpoint (and out of this wholesaler's list), so the screen closes. */
+    fun handBack(reason: String, onDone: () -> Unit, onError: (String) -> Unit) = viewModelScope.launch {
+        _busy.value = true
+        try {
+            apiCall { api.reject(id, RejectBody(reason)) }
+            onDone()
+        } catch (e: ApiException) {
+            onError(e.message ?: "Something went wrong")
+        } finally {
+            _busy.value = false
+        }
+    }
 
     suspend fun invoiceUri(orderNumber: String): Uri {
         val body = apiCall { api.invoice(id) }
@@ -271,12 +282,12 @@ fun SellerOrderScreen(onBack: () -> Unit, vm: SellerOrderViewModel = hiltViewMod
         snackbarHost = { SnackbarHost(snackbar) },
         bottomBar = {
             val o = (state as? Load.Ready)?.data ?: return@Scaffold
-            if (o.status == "placed" || o.status == "accepted") {
+            if (o.status == "forwarded" || o.status == "accepted") {
                 Surface(tonalElevation = 3.dp, shadowElevation = 8.dp) {
                     Row(Modifier.fillMaxWidth().navigationBarsPadding().padding(16.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        OutlinedButton(onClick = { rejecting = true }, enabled = !busy) { Text("Reject") }
+                        OutlinedButton(onClick = { rejecting = true }, enabled = !busy) { Text("Can't supply") }
                         Box(Modifier.weight(1f)) {
-                            if (o.status == "placed") {
+                            if (o.status == "forwarded") {
                                 PrimaryButton("Accept order", onClick = { vm.accept(showError) }, loading = busy)
                             } else {
                                 PrimaryButton("Mark as packed", onClick = { vm.pack(showError) }, loading = busy)
@@ -307,7 +318,7 @@ fun SellerOrderScreen(onBack: () -> Unit, vm: SellerOrderViewModel = hiltViewMod
                         }
                     }
 
-                    Text(if (o.status in setOf("placed", "accepted")) "Items to pack" else "Items", style = MaterialTheme.typography.titleSmall)
+                    Text(if (o.status in setOf("forwarded", "accepted")) "Items to pack" else "Items", style = MaterialTheme.typography.titleSmall)
                     o.items.forEach { i ->
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Surface(shape = RoundedCornerShape(8.dp), color = MaterialTheme.colorScheme.primaryContainer) {
@@ -315,14 +326,15 @@ fun SellerOrderScreen(onBack: () -> Unit, vm: SellerOrderViewModel = hiltViewMod
                             }
                             Column(Modifier.padding(start = 12.dp).weight(1f)) {
                                 Text(i.productName, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
-                                Text("${i.variantName} · ${rupees(i.unitPricePaise)} each", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                val unit = i.supplyUnitPricePaise ?: i.unitPricePaise
+                                Text("${i.variantName} · ${rupees(unit)} each", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
-                            Text(rupees(i.lineTotalPaise), style = MaterialTheme.typography.bodyMedium)
+                            Text(rupees((i.supplyUnitPricePaise ?: i.unitPricePaise) * i.qty), style = MaterialTheme.typography.bodyMedium)
                         }
                     }
                     HorizontalDivider()
-                    MoneyRow("Order value", o.subtotalPaise - o.discountPaise)
-                    Text("Delivery is arranged by Partpoint. The platform commission is deducted at payout.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    MoneyRow("You receive", o.supplyTotalPaise ?: (o.subtotalPaise - o.discountPaise), bold = true)
+                    Text("At your supply prices when Partpoint sent you the order. Partpoint arranges the delivery.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
 
                     Column {
                         Text("Deliver to", style = MaterialTheme.typography.titleSmall)
@@ -342,7 +354,7 @@ fun SellerOrderScreen(onBack: () -> Unit, vm: SellerOrderViewModel = hiltViewMod
                         }
                     }
 
-                    if (o.status !in setOf("placed", "accepted", "cancelled")) {
+                    if (o.status !in setOf("forwarded", "accepted", "cancelled")) {
                         OutlinedButton(onClick = {
                             scope.launch {
                                 try {
@@ -368,18 +380,18 @@ fun SellerOrderScreen(onBack: () -> Unit, vm: SellerOrderViewModel = hiltViewMod
         var reason by remember { mutableStateOf("") }
         AlertDialog(
             onDismissRequest = { rejecting = false },
-            title = { Text("Reject this order?") },
+            title = { Text("Hand this order back?") },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("The retailer is told why and the stock goes back on sale.")
-                    OutlinedTextField(reason, { reason = it.take(300) }, label = { Text("Reason, e.g. out of stock") })
+                    Text("Partpoint will send it to another wholesaler, and your stock for these items is restored. Tell us why so we can fix your stock list.")
+                    OutlinedTextField(reason, { reason = it.take(300) }, label = { Text("Reason, e.g. stock damaged") })
                 }
             },
             confirmButton = {
                 Button(enabled = reason.isNotBlank(), onClick = {
                     rejecting = false
-                    vm.reject(reason.trim(), showError)
-                }) { Text("Reject") }
+                    vm.handBack(reason.trim(), onDone = onBack, onError = showError)
+                }) { Text("Hand back") }
             },
             dismissButton = { TextButton(onClick = { rejecting = false }) { Text("Keep order") } },
         )
@@ -390,7 +402,7 @@ fun SellerOrderScreen(onBack: () -> Unit, vm: SellerOrderViewModel = hiltViewMod
 @Composable
 private fun NextStep(o: OrderDetail) {
     val text = when (o.status) {
-        "placed" -> "Check you have every item, then accept. The retailer is waiting."
+        "forwarded" -> "Partpoint chose your stock for this order. Check you have every item, then accept."
         "accepted" -> "Pack the items and mark the order packed. The GST invoice is created at that moment."
         "packed" -> "Packed. Partpoint is assigning a delivery partner to pick it up."
         "assigned" -> "A delivery partner is coming to pick this up. Keep the parcel and invoice ready."

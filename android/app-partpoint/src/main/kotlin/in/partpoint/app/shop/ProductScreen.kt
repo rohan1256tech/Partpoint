@@ -25,7 +25,7 @@ import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material.icons.outlined.ShoppingCart
 import androidx.compose.material.icons.outlined.Star
-import androidx.compose.material.icons.outlined.Storefront
+import androidx.compose.material.icons.outlined.Verified
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
@@ -61,7 +61,9 @@ import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import `in`.partpoint.core.network.ApiException
 import `in`.partpoint.core.network.apiCall
+import `in`.partpoint.core.ui.BrandColors
 import `in`.partpoint.core.ui.ErrorState
+import `in`.partpoint.core.ui.partIcon
 import `in`.partpoint.core.ui.LoadingScreen
 import `in`.partpoint.core.ui.PriceLine
 import `in`.partpoint.core.ui.QtyStepper
@@ -104,7 +106,7 @@ class ProductViewModel @Inject constructor(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ProductScreen(onBack: () -> Unit, onOpenCart: () -> Unit, onWholesaler: (WholesalerRef) -> Unit, vm: ProductViewModel = hiltViewModel()) {
+fun ProductScreen(onBack: () -> Unit, onOpenCart: () -> Unit, vm: ProductViewModel = hiltViewModel()) {
     val state by vm.state.collectAsStateWithLifecycle()
     val snackbar = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
@@ -142,7 +144,7 @@ fun ProductScreen(onBack: () -> Unit, onOpenCart: () -> Unit, onWholesaler: (Who
         when (val s = state) {
             Load.Loading -> LoadingScreen()
             is Load.Failed -> ErrorState(s.message) { vm.reload() }
-            is Load.Ready -> ProductBody(s.data, vm, Modifier.padding(padding), snackbar, onOpenCart, onWholesaler)
+            is Load.Ready -> ProductBody(s.data, vm, Modifier.padding(padding), snackbar, onOpenCart)
         }
     }
 }
@@ -154,27 +156,26 @@ private fun ProductBody(
     modifier: Modifier,
     snackbar: SnackbarHostState,
     onOpenCart: () -> Unit,
-    onWholesaler: (WholesalerRef) -> Unit,
 ) {
     val p = page.product
     val variants = p.variants.filter { it.isActive }
     var selectedId by rememberSaveable { mutableStateOf(variants.firstOrNull { it.stockQty > 0 }?.id ?: variants.firstOrNull()?.id) }
     val selected = variants.firstOrNull { it.id == selectedId }
     val cart by vm.cart.cart.collectAsStateWithLifecycle()
-    val inCart = selected?.let { v -> cart.groups.flatMap { it.lines }.firstOrNull { it.variantId == v.id }?.qty } ?: 0
+    val inCart = selected?.let { v -> cart.lines.firstOrNull { it.variantId == v.id }?.qty } ?: 0
     var qty by remember(selectedId, inCart) { mutableIntStateOf(if (inCart > 0) inCart else selected?.minOrderQty ?: 1) }
     var busy by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
 
     Column(modifier.fillMaxSize()) {
         Column(Modifier.weight(1f).verticalScroll(rememberScrollState())) {
-            Gallery(p.images.sortedBy { it.sortOrder }.map { it.url })
+            Gallery(p.images.sortedBy { it.sortOrder }.map { it.url }, partIcon(p.name, p.category.name))
             Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 if (p.brand != null) Text(p.brand.name.uppercase(), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
                 Text(p.name, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
                 if (p.ratingCount > 0) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Outlined.Star, null, tint = Color(0xFFF59E0B), modifier = Modifier.size(18.dp))
+                        Icon(Icons.Outlined.Star, null, tint = BrandColors.Amber, modifier = Modifier.size(18.dp))
                         Text(" %.1f · %d review%s".format(p.ratingAvg, p.ratingCount, if (p.ratingCount == 1) "" else "s"), style = MaterialTheme.typography.bodyMedium)
                     }
                 }
@@ -202,28 +203,40 @@ private fun ProductBody(
                 StockLine(selected)
 
                 Surface(
-                    onClick = { onWholesaler(p.wholesaler) },
-                    shape = RoundedCornerShape(12.dp),
-                    color = MaterialTheme.colorScheme.surfaceContainerLow,
+                    shape = RoundedCornerShape(16.dp),
+                    color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.45f),
                     modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
                 ) {
-                    Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Outlined.Storefront, null, tint = MaterialTheme.colorScheme.primary)
+                    Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Outlined.Verified, null, tint = MaterialTheme.colorScheme.primary)
                         Column(Modifier.padding(start = 12.dp).weight(1f)) {
-                            Text("Sold by ${p.wholesaler.businessName}", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
-                            Text("${p.wholesaler.city} · see all their products", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text("Sold and delivered by Partpoint", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
+                            Text("Checked before dispatch · GST invoice with every order", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                     }
                 }
 
-                val details = listOfNotNull(p.partNumber?.let { "Part number" to it }, "Category" to p.category.name)
-                details.forEach { (k, v) ->
-                    Row {
-                        Text(k, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.weight(0.4f))
-                        Text(v, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(0.6f))
+                Surface(shape = RoundedCornerShape(16.dp), color = MaterialTheme.colorScheme.surfaceContainerLow, modifier = Modifier.fillMaxWidth()) {
+                    Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text("Details", style = MaterialTheme.typography.titleSmall)
+                        val details = listOfNotNull(
+                            p.partNumber?.let { "Part number" to it },
+                            p.brand?.let { "Brand" to it.name },
+                            "Category" to p.category.name,
+                            p.hsnCode?.let { "HSN code" to it },
+                        )
+                        details.forEach { (k, v) ->
+                            Row {
+                                Text(k, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.weight(0.4f))
+                                Text(v, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(0.6f))
+                            }
+                        }
+                        if (!p.description.isNullOrBlank()) {
+                            HorizontalDivider(Modifier.padding(vertical = 4.dp), color = MaterialTheme.colorScheme.outlineVariant)
+                            Text(p.description, style = MaterialTheme.typography.bodyMedium)
+                        }
                     }
                 }
-                if (!p.description.isNullOrBlank()) Text(p.description, style = MaterialTheme.typography.bodyMedium)
 
                 if (page.reviews.isNotEmpty()) {
                     HorizontalDivider(Modifier.padding(vertical = 8.dp))
@@ -284,15 +297,15 @@ private fun ProductBody(
 }
 
 @Composable
-private fun Gallery(urls: List<String>) {
+private fun Gallery(urls: List<String>, fallback: androidx.compose.ui.graphics.vector.ImageVector) {
     if (urls.isEmpty()) {
-        RemoteImage(null, Modifier.fillMaxWidth().aspectRatio(1.3f), corner = 0.dp)
+        RemoteImage(null, Modifier.fillMaxWidth().aspectRatio(1.3f), corner = 0.dp, fallback = fallback)
         return
     }
     val pager = rememberPagerState { urls.size }
     Box {
         HorizontalPager(state = pager) { i ->
-            RemoteImage(urls[i], Modifier.fillMaxWidth().aspectRatio(1.3f), corner = 0.dp, contentScale = androidx.compose.ui.layout.ContentScale.Fit)
+            RemoteImage(urls[i], Modifier.fillMaxWidth().aspectRatio(1.3f), corner = 0.dp, contentScale = androidx.compose.ui.layout.ContentScale.Fit, fallback = fallback)
         }
         if (urls.size > 1) {
             Surface(
@@ -338,7 +351,7 @@ private fun StockLine(v: Variant?) {
         v == null -> return
         v.stockQty <= 0 -> "Out of stock" to MaterialTheme.colorScheme.error
         v.stockQty <= 10 -> "Only ${v.stockQty} left" to Color(0xFFC2410C)
-        else -> "In stock" to SavingGreen
+        else -> "In stock, ready to ship" to SavingGreen
     }
     Text(
         text + if (v.minOrderQty > 1) " · minimum order ${v.minOrderQty}" else "",

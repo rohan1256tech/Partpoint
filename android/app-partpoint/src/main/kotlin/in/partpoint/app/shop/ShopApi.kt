@@ -21,6 +21,7 @@ import retrofit2.http.Streaming
 @Serializable data class Brand(val id: String, val name: String, val slug: String, val logoUrl: String? = null)
 @Serializable data class Banner(val id: String, val title: String, val imageUrl: String, val linkType: String = "none", val linkValue: String? = null)
 
+/** Who fulfils an order. Retailers never get this (they buy from Partpoint); a wholesaler sees itself. */
 @Serializable data class WholesalerRef(val id: String, val businessName: String, val city: String = "", val state: String = "")
 
 @Serializable
@@ -29,7 +30,7 @@ data class ProductSummary(
     val name: String,
     val partNumber: String? = null,
     val brandName: String? = null,
-    val wholesaler: WholesalerRef,
+    val categoryName: String? = null,
     val minPricePaise: Long? = null,
     val mrpPaise: Long? = null,
     val totalStock: Int = 0,
@@ -39,6 +40,8 @@ data class ProductSummary(
     /** draft | active | hidden | blocked (the seller sees all of them; buyers only active). */
     val status: String = "active",
     val statusReason: String? = null,
+    /** Wholesaler only: how many units of it they have listed. */
+    val myStockQty: Int? = null,
 )
 
 @Serializable data class Slab(val minQty: Int, val pricePaise: Long)
@@ -54,10 +57,15 @@ data class Variant(
     val minOrderQty: Int = 1,
     val isActive: Boolean = true,
     val slabs: List<Slab> = emptyList(),
+    /** Wholesaler only: their own stock and supply price for this variant. */
+    val myOffer: Offer? = null,
 ) {
     /** The unit price that applies at [qty]: the best bulk slab reached, else the base price. */
     fun unitPriceAt(qty: Int): Long = slabs.filter { qty >= it.minQty }.minOfOrNull { it.pricePaise } ?: pricePaise
 }
+
+/** A wholesaler's stock of a variant and the price Partpoint pays them for it. */
+@Serializable data class Offer(val supplyPricePaise: Long, val stockQty: Int, val isActive: Boolean = true)
 
 @Serializable data class NamedRef(val id: String, val name: String)
 @Serializable data class ProductImage(val id: String, val url: String, val sortOrder: Int = 0)
@@ -76,7 +84,6 @@ data class ProductDetail(
     val ratingCount: Int = 0,
     val category: NamedRef,
     val brand: NamedRef? = null,
-    val wholesaler: WholesalerRef,
     val images: List<ProductImage> = emptyList(),
     val variants: List<Variant> = emptyList(),
 )
@@ -98,22 +105,11 @@ data class CartLine(
     val issue: String? = null,
 )
 
-@Serializable
-data class CartGroup(
-    val wholesaler: WholesalerRef,
-    val lines: List<CartLine>,
-    val subtotalPaise: Long,
-    val discountPaise: Long,
-    val deliveryFeePaise: Long,
-    val totalPaise: Long,
-    val belowMinOrder: Boolean = false,
-)
-
 @Serializable data class AppliedCoupon(val code: String, val discountPaise: Long)
 
 @Serializable
 data class Cart(
-    val groups: List<CartGroup> = emptyList(),
+    val lines: List<CartLine> = emptyList(),
     val itemCount: Int = 0,
     val subtotalPaise: Long = 0,
     val discountPaise: Long = 0,
@@ -122,6 +118,7 @@ data class Cart(
     val coupon: AppliedCoupon? = null,
     val couponError: String? = null,
     val minOrderPaise: Long = 0,
+    val belowMinOrder: Boolean = false,
     val canCheckout: Boolean = false,
 )
 
@@ -169,13 +166,13 @@ data class OrderSummary(
     val status: String,
     val totalPaise: Long,
     val itemCount: Int,
-    val wholesaler: WholesalerRef,
+    val wholesaler: WholesalerRef? = null,
     val retailer: RetailerRef? = null,
     val createdAt: String,
 )
 
-/** The reply to placing an order: one short entry per seller (backend PlacedOrders). */
-@Serializable data class PlacedOrder(val id: String, val orderNumber: String, val wholesalerId: String, val totalPaise: Long)
+/** The reply to placing an order (backend PlacedOrders): one Partpoint order. */
+@Serializable data class PlacedOrder(val id: String, val orderNumber: String, val totalPaise: Long)
 
 @Serializable data class PlacedOrders(val checkoutId: String, val totalPaise: Long, val orders: List<PlacedOrder>)
 
@@ -188,8 +185,11 @@ data class OrderItem(
     val qty: Int,
     val unitPricePaise: Long,
     val lineTotalPaise: Long,
+    /** Wholesaler only: what Partpoint pays per unit. */
+    val supplyUnitPricePaise: Long? = null,
 )
 
+@Serializable data class OrderRef(val id: String, val orderNumber: String, val status: String)
 @Serializable data class TimelineEvent(val status: String, val note: String? = null, val at: String)
 @Serializable data class PersonRef(val id: String, val name: String, val phone: String? = null)
 
@@ -216,11 +216,15 @@ data class OrderDetail(
     val discountPaise: Long = 0,
     val deliveryFeePaise: Long = 0,
     val itemCount: Int,
-    val wholesaler: WholesalerRef,
+    val wholesaler: WholesalerRef? = null,
     val retailer: RetailerRef? = null,
     val address: OrderAddress,
     val items: List<OrderItem>,
     val timeline: List<TimelineEvent>,
+    /** Other parcels of the same purchase, when Partpoint split it. */
+    val siblings: List<OrderRef> = emptyList(),
+    /** Wholesaler only: what Partpoint pays them for these goods. */
+    val supplyTotalPaise: Long? = null,
     val cancelReason: String? = null,
     val deliveredAt: String? = null,
     val deliveryPartner: PersonRef? = null,
@@ -250,7 +254,6 @@ interface ShopApi {
         @Query("q") q: String? = null,
         @Query("categoryId") categoryId: String? = null,
         @Query("brandId") brandId: String? = null,
-        @Query("wholesalerId") wholesalerId: String? = null,
         @Query("cursor") cursor: String? = null,
         @Query("limit") limit: Int = 20,
     ): Page<ProductSummary>

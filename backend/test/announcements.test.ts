@@ -27,7 +27,7 @@ describe('admin announcements', () => {
     await withDevice('retailer', 'pending-retailer-token-0000003', { status: 'pending' });
     await withDevice('wholesaler', 'wholesaler-device-token-0000004');
 
-    const sent = await http.post('/v1/admin/announcements', admin, { audience: 'retailer', title: 'Diwali offer', body: '10% off brake parts this week' });
+    const sent = await http.post('/v1/admin/announcements', admin, { audience: 'retailer', title: 'Diwali offer', body: '10% off chargers this week' });
     expect(sent.statusCode).toBe(201);
     expect(sent.json()).toMatchObject({ audience: 'retailer', recipients: 2, devices: 2 });
     await t.pushes();

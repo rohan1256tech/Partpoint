@@ -132,10 +132,11 @@ fun LoginScreen(
     }
 
     ScreenColumn {
-        Spacer(Modifier.height(24.dp))
+        Spacer(Modifier.height(16.dp))
+        `in`.partpoint.core.ui.BrandMark(size = 64.dp)
         Text(appTitle, style = MaterialTheme.typography.headlineMedium)
         Text(tagline, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        Spacer(Modifier.height(16.dp))
+        Spacer(Modifier.height(8.dp))
 
         if (s.phone == null) {
             OutlinedTextField(

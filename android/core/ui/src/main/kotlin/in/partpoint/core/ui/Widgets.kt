@@ -3,6 +3,7 @@ package `in`.partpoint.core.ui
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -26,6 +27,7 @@ import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.luminance
@@ -40,13 +42,28 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import coil3.compose.SubcomposeAsyncImage
 
-/** A product or category photo, with a neutral placeholder while loading or when there is none. */
+/**
+ * A product or category photo. Without a photo (or while loading) it shows [fallback] artwork
+ * on a soft brand tint, so cards still look intentional.
+ */
 @Composable
-fun RemoteImage(url: String?, modifier: Modifier = Modifier, corner: Dp = 12.dp, contentScale: ContentScale = ContentScale.Crop) {
+fun RemoteImage(
+    url: String?,
+    modifier: Modifier = Modifier,
+    corner: Dp = 12.dp,
+    contentScale: ContentScale = ContentScale.Crop,
+    fallback: ImageVector = Icons.Outlined.Image,
+) {
     val shape = RoundedCornerShape(corner)
+    val scheme = MaterialTheme.colorScheme
     val placeholder: @Composable () -> Unit = {
-        Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surfaceVariant), contentAlignment = Alignment.Center) {
-            Icon(Icons.Outlined.Image, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f))
+        BoxWithConstraints(
+            Modifier.fillMaxSize().background(
+                Brush.linearGradient(listOf(scheme.primaryContainer.copy(alpha = 0.55f), scheme.secondaryContainer.copy(alpha = 0.45f))),
+            ),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(fallback, contentDescription = null, tint = scheme.primary.copy(alpha = 0.55f), modifier = Modifier.size(minOf(maxWidth, maxHeight) * 0.42f))
         }
     }
     Box(modifier.clip(shape)) {
@@ -67,7 +84,7 @@ fun RemoteImage(url: String?, modifier: Modifier = Modifier, corner: Dp = 12.dp,
 
 /** Selling price, with MRP struck through and the saving when there is one. */
 @Composable
-fun PriceLine(pricePaise: Long, mrpPaise: Long?, modifier: Modifier = Modifier, large: Boolean = false) {
+fun PriceLine(pricePaise: Long, mrpPaise: Long?, modifier: Modifier = Modifier, large: Boolean = false, showOff: Boolean = true) {
     val off = discountPercent(mrpPaise, pricePaise)
     Row(modifier, verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
         Text(
@@ -83,7 +100,7 @@ fun PriceLine(pricePaise: Long, mrpPaise: Long?, modifier: Modifier = Modifier, 
                 textDecoration = TextDecoration.LineThrough,
                 modifier = Modifier.semantics { contentDescription = "MRP ${rupees(mrpPaise)}" },
             )
-            Text("$off% off", style = MaterialTheme.typography.labelMedium, color = SavingGreen, fontWeight = FontWeight.SemiBold)
+            if (showOff) Text("$off% off", style = MaterialTheme.typography.labelMedium, color = SavingGreen, fontWeight = FontWeight.SemiBold)
         }
     }
 }
@@ -160,7 +177,8 @@ fun StatusPill(text: String, color: Color, modifier: Modifier = Modifier) {
 
 /** Order status → colour, shared by both apps. */
 fun orderStatusColor(status: String): Color = when (status) {
-    "placed" -> Color(0xFF1F6FD1)
+    "placed" -> Color(0xFF4338CA)
+    "forwarded" -> Color(0xFF4338CA)
     "accepted" -> Color(0xFF0E7490)
     "packed" -> Color(0xFF6D28D9)
     "assigned", "picked_up", "out_for_delivery" -> Color(0xFFC2410C)

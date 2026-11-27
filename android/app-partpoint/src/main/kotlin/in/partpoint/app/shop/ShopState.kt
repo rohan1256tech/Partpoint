@@ -55,7 +55,7 @@ class CartStore @Inject constructor(private val api: ShopApi) {
         _cart.value = apiCall { api.cart(_couponCode.value) }
     }
 
-    fun qtyOf(variantId: String): Int = _cart.value.groups.flatMap { it.lines }.firstOrNull { it.variantId == variantId }?.qty ?: 0
+    fun qtyOf(variantId: String): Int = _cart.value.lines.firstOrNull { it.variantId == variantId }?.qty ?: 0
 
     /** After a successful order the server empties the cart. */
     fun clearLocal() {

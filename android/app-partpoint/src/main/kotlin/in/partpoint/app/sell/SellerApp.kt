@@ -66,22 +66,22 @@ import javax.inject.Inject
 import kotlin.reflect.KClass
 
 @Serializable data object SellerOrdersTab
-@Serializable data object SellerProductsTab
+@Serializable data object StockTab
 @Serializable data object EarningsTab
 @Serializable data object SellerAccountTab
 @Serializable data class SellerOrder(val id: String)
-@Serializable data class EditProduct(val id: String? = null)
+@Serializable data class StockProduct(val id: String)
 
 private data class SellerTabItem(val route: Any, val type: KClass<*>, val label: String, val icon: ImageVector, val selected: ImageVector)
 
 private val SELLER_TABS = listOf(
     SellerTabItem(SellerOrdersTab, SellerOrdersTab::class, "Orders", Icons.Outlined.Receipt, Icons.Filled.Receipt),
-    SellerTabItem(SellerProductsTab, SellerProductsTab::class, "Products", Icons.Outlined.Inventory2, Icons.Filled.Inventory2),
+    SellerTabItem(StockTab, StockTab::class, "Stock", Icons.Outlined.Inventory2, Icons.Filled.Inventory2),
     SellerTabItem(EarningsTab, EarningsTab::class, "Earnings", Icons.Outlined.AccountBalanceWallet, Icons.Filled.AccountBalanceWallet),
     SellerTabItem(SellerAccountTab, SellerAccountTab::class, "Account", Icons.Outlined.Person, Icons.Filled.Person),
 )
 
-/** The wholesaler's app: orders first (the daily work), then products, earnings and account. */
+/** The wholesaler's app: orders Partpoint sends them first (the daily work), then their stock, earnings and account. */
 @Composable
 fun SellerApp(me: Me) {
     val nav = rememberNavController()
@@ -107,11 +107,11 @@ fun SellerApp(me: Me) {
     ) { padding ->
         NavHost(nav, startDestination = SellerOrdersTab, modifier = Modifier.padding(bottom = padding.calculateBottomPadding())) {
             composable<SellerOrdersTab> { SellerOrdersScreen(onOrder = { nav.navigate(SellerOrder(it)) }) }
-            composable<SellerProductsTab> { SellerProductsScreen(onProduct = { nav.navigate(EditProduct(it)) }) }
+            composable<StockTab> { StockScreen(onProduct = { nav.navigate(StockProduct(it)) }) }
             composable<EarningsTab> { EarningsScreen() }
             composable<SellerAccountTab> { SellerAccountScreen(me) }
             composable<SellerOrder> { SellerOrderScreen(onBack = { nav.popBackStack() }) }
-            composable<EditProduct> { ProductEditorScreen(onBack = { nav.popBackStack() }) }
+            composable<StockProduct> { StockProductScreen(onBack = { nav.popBackStack() }) }
         }
     }
 }
@@ -159,7 +159,7 @@ fun EarningsScreen(vm: EarningsViewModel = hiltViewModel()) {
                             Text("Partpoint owes you", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onPrimaryContainer)
                             Text(rupees(b?.balancePaise ?: 0), style = MaterialTheme.typography.displaySmall, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onPrimaryContainer)
                             Text(
-                                "Paid to your bank by transfer. Delivered orders count once delivered.",
+                                "At your supply prices, for delivered orders. Paid to your bank by transfer.",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onPrimaryContainer,
                             )
@@ -168,8 +168,7 @@ fun EarningsScreen(vm: EarningsViewModel = hiltViewModel()) {
                     if (b != null) {
                         Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                             Line("Delivered orders", b.deliveredOrders.toString())
-                            Line("Goods value", rupees(b.goodsPaise))
-                            Line("Platform commission", "−" + rupees(b.commissionPaise))
+                            Line("Value of goods you supplied", rupees(b.owedPaise))
                             Line("Paid to you so far", rupees(b.paidPaise))
                         }
                     }
