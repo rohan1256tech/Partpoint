@@ -159,7 +159,7 @@ export async function buildApp({ env, db, checks, messaging, storage, push }: Ap
     authenticate,
   });
   await app.register(catalogRoutes, { prefix: '/v1', ...catalog });
-  await app.register(wholesalerProductRoutes, { prefix: '/v1/wholesaler/products', ...catalog });
+  await app.register(wholesalerProductRoutes, { prefix: '/v1/wholesaler/catalog', ...catalog });
   await app.register(adminCatalogRoutes, { prefix: '/v1/admin', ...catalog });
 
   const settings = new SettingsService(db);

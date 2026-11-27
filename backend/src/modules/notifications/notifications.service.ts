@@ -11,8 +11,9 @@ type ClientApp = (typeof pushTokens.$inferSelect)['app'];
 const ORDER_PUSH: Partial<
   Record<OrderStatus, { to: ('retailer' | 'wholesaler' | 'delivery')[]; title: string; body: (n: string) => string }>
 > = {
-  placed: { to: ['wholesaler'], title: 'New order', body: (n) => `${n} is waiting for you to accept it` },
-  accepted: { to: ['retailer'], title: 'Order accepted', body: (n) => `${n} is being prepared` },
+  // 'placed' goes to the admin panel's queue, not to a phone.
+  forwarded: { to: ['wholesaler'], title: 'New order', body: (n) => `${n} is waiting for you to accept it` },
+  accepted: { to: ['retailer'], title: 'Order confirmed', body: (n) => `${n} is being prepared` },
   packed: { to: ['retailer'], title: 'Order packed', body: (n) => `${n} is packed and awaiting pickup` },
   assigned: { to: ['delivery'], title: 'New delivery', body: (n) => `${n} is assigned to you` },
   picked_up: { to: ['retailer'], title: 'Order picked up', body: (n) => `${n} is on its way. Keep your delivery code ready` },

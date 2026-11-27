@@ -34,13 +34,16 @@ export async function assignInvoice(tx: Tx, orderId: string): Promise<void> {
     .from(orders)
     .where(eq(orders.id, orderId));
   if (!o || o.invoiceNumber) return;
+  // Packing needs a wholesaler, so this only guards against a broken caller.
+  if (!o.wholesalerId) throw new Error('cannot invoice an order without a wholesaler');
+  const wholesalerId = o.wholesalerId;
 
   const now = new Date();
   const fy = financialYear(now);
   // Upsert-and-increment is atomic per (wholesaler, year): serials are consecutive with no duplicates.
   const [counter] = await tx
     .insert(invoiceCounters)
-    .values({ wholesalerId: o.wholesalerId, financialYear: fy, lastSerial: 1 })
+    .values({ wholesalerId, financialYear: fy, lastSerial: 1 })
     .onConflictDoUpdate({
       target: [invoiceCounters.wholesalerId, invoiceCounters.financialYear],
       set: { lastSerial: sql`${invoiceCounters.lastSerial} + 1` },
@@ -57,7 +60,7 @@ export async function assignInvoice(tx: Tx, orderId: string): Promise<void> {
       pincode: wholesalerProfiles.pincode,
     })
     .from(wholesalerProfiles)
-    .where(eq(wholesalerProfiles.userId, o.wholesalerId));
+    .where(eq(wholesalerProfiles.userId, wholesalerId));
   const [buyer] = await tx
     .select({ shopName: retailerProfiles.shopName, gstin: retailerProfiles.gstin })
     .from(retailerProfiles)

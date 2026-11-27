@@ -112,7 +112,7 @@ describe('phone OTP signup and login', () => {
   it('rejects an expired code', async () => {
     await post('/v1/auth/otp/request', { phone: '9876543210' });
     const code = t.messaging.lastCodeFor('+919876543210');
-    await t.db.update(otpCodes).set({ expiresAt: new Date(Date.now() - 1000) });
+    await t.db.update(otpCodes).set({ expiresAt: new Date(Date.now() - 60_000) });
     expect((await post('/v1/auth/otp/verify', { phone: '9876543210', code, ...device })).statusCode).toBe(400);
   });
 

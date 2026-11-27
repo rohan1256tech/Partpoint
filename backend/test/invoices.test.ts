@@ -3,7 +3,7 @@ import { eq } from 'drizzle-orm';
 import { wholesalerProfiles } from '../src/db/schema.js';
 import { computeInvoice, financialYear, taxMode, type InvoiceItemInput } from '../src/modules/invoices/invoice-calc.js';
 import { InvoicesService } from '../src/modules/invoices/invoices.js';
-import { api, createTestApp, resetDb, signIn, type TestContext } from './helpers.js';
+import { api, catalogProduct, forward, supply, createTestApp, resetDb, signIn, type TestContext } from './helpers.js';
 
 const item = (lineTotalPaise: number, gstRateBps = 1800, qty = 1): InvoiceItemInput => ({
   productName: 'Part',
@@ -82,19 +82,17 @@ beforeEach(async () => {
   w2 = await signIn(t, 'wholesaler', { name: 'Delhi Auto' });
   retailer = await signIn(t, 'retailer');
   await t.db.update(wholesalerProfiles).set({ gstin: '27AAPFU0939F1ZV' }).where(eq(wholesalerProfiles.userId, w1.id));
-  const categoryId = (await http.post('/v1/admin/categories', admin, { name: 'Engine' })).json().id;
+  const categoryId = (await http.post('/v1/admin/categories', admin, { name: 'Displays' })).json().id;
   for (const [key, w] of [['w1', w1], ['w2', w2]] as const) {
-    const p = (
-      await http.post('/v1/wholesaler/products', w.token, {
-        categoryId,
-        name: `Filter ${key}`,
-        hsnCode: '84212300',
-        gstRateBps: 1800,
-        variants: [{ name: 'Single', mrpPaise: 150_000, pricePaise: 118_000, stockQty: 100 }],
-      })
-    ).json();
-    await http.post(`/v1/wholesaler/products/${p.id}/publish`, w.token);
-    variants[key] = p.variants[0].id;
+    const { variantId } = await catalogProduct(http, admin, {
+      categoryId,
+      name: `Display ${key}`,
+      hsnCode: '85177900',
+      gstRateBps: 1800,
+      variants: [{ name: 'Black', mrpPaise: 150_000, pricePaise: 118_000 }],
+    });
+    await supply(http, w.token, variantId, 110_000, 100);
+    variants[key] = variantId;
   }
   addressId = (
     await http.post('/v1/me/addresses', retailer.token, {
@@ -116,6 +114,7 @@ async function order(variant: string): Promise<string> {
   return (await http.post('/v1/orders', retailer.token, { addressId, idempotencyKey: `k-${Math.random()}` })).json().orders[0].id;
 }
 async function pack(id: string, token: string) {
+  await forward(http, admin, id, token === w1.token ? w1.id : w2.id);
   await http.post(`/v1/wholesaler/orders/${id}/accept`, token);
   expect((await http.post(`/v1/wholesaler/orders/${id}/pack`, token)).statusCode).toBe(200);
 }

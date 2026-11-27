@@ -10,7 +10,7 @@ import {
   deliveryProfiles,
   orders,
   otpCodes,
-  products,
+  supplierOffers,
   pushTokens,
   retailerProfiles,
   sessions,
@@ -146,11 +146,8 @@ export class AccountService {
       await tx.update(retailerProfiles).set({ shopName: 'Deleted shop', gstin: null }).where(eq(retailerProfiles.userId, userId));
     }
     if (u.role === 'wholesaler') {
-      // The business record stays for tax purposes; its listings are taken down.
-      await tx
-        .update(products)
-        .set({ status: 'hidden' })
-        .where(and(eq(products.wholesalerId, userId), notInArray(products.status, ['blocked'])));
+      // The business record stays for tax purposes; its stock is taken off sale.
+      await tx.update(supplierOffers).set({ isActive: false, stockQty: 0 }).where(eq(supplierOffers.wholesalerId, userId));
     }
     if (u.role === 'delivery') {
       await tx

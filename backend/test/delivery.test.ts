@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { eq } from 'drizzle-orm';
 import { pushTokens } from '../src/db/schema.js';
 import { deliveryOtp } from '../src/modules/orders/delivery-otp.js';
-import { api, createTestApp, resetDb, signIn, testEnv, type TestContext } from './helpers.js';
+import { api, catalogProduct, createTestApp, forward, resetDb, signIn, supply, testEnv, type TestContext } from './helpers.js';
 
 describe('delivery OTP', () => {
   it('is a stable 4-digit code per order', () => {
@@ -32,16 +32,15 @@ beforeEach(async () => {
   retailer = await signIn(t, 'retailer');
   rider = await signIn(t, 'delivery', { name: 'Raju' });
 
-  const categoryId = (await http.post('/v1/admin/categories', admin, { name: 'Engine' })).json().id;
-  const p = (
-    await http.post('/v1/wholesaler/products', wholesaler.token, {
+  const categoryId = (await http.post('/v1/admin/categories', admin, { name: 'Chargers' })).json().id;
+  variantId = (
+    await catalogProduct(http, admin, {
       categoryId,
-      name: 'Oil Filter',
-      variants: [{ name: 'Single', mrpPaise: 45_000, pricePaise: 38_000, stockQty: 100 }],
+      name: '20W USB-C Fast Charger',
+      variants: [{ name: 'White', mrpPaise: 45_000, pricePaise: 38_000 }],
     })
-  ).json();
-  await http.post(`/v1/wholesaler/products/${p.id}/publish`, wholesaler.token);
-  variantId = p.variants[0].id;
+  ).variantId;
+  await supply(http, wholesaler.token, variantId, 34_000, 100);
   addressId = (
     await http.post('/v1/me/addresses', retailer.token, {
       contactName: 'Ravi',
@@ -62,6 +61,7 @@ async function packedOrder(): Promise<string> {
   await http.put(`/v1/cart/items/${variantId}`, retailer.token, { qty: 2 });
   const id = (await http.post('/v1/orders', retailer.token, { addressId, idempotencyKey: `k-${Math.random()}` })).json()
     .orders[0].id;
+  await forward(http, admin, id, wholesaler.id);
   await http.post(`/v1/wholesaler/orders/${id}/accept`, wholesaler.token);
   await http.post(`/v1/wholesaler/orders/${id}/pack`, wholesaler.token);
   return id;
@@ -206,7 +206,7 @@ describe('push notifications', () => {
     await t.pushes();
 
     expect(t.push.titlesFor('wholesaler-device-token-0001')).toEqual(['New order']);
-    expect(t.push.titlesFor('retailer-device-token-000001')).toEqual(['Order accepted', 'Order packed']);
+    expect(t.push.titlesFor('retailer-device-token-000001')).toEqual(['Order confirmed', 'Order packed']);
     expect(t.push.titlesFor('rider-device-token-0000000001')).toEqual(['New delivery']);
     const msg = t.push.sent.find((s) => s.message.title === 'New delivery')?.message;
     expect(msg?.data).toEqual({ type: 'order', orderId: id, status: 'assigned' });

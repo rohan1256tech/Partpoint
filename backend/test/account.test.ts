@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { eq } from 'drizzle-orm';
-import { accountDeletionRequests, addresses, orders, products, retailerProfiles, sessions, users } from '../src/db/schema.js';
-import { api, createTestApp, resetDb, signIn, type TestContext } from './helpers.js';
+import { accountDeletionRequests, addresses, orders, products, retailerProfiles, sessions, supplierOffers, users } from '../src/db/schema.js';
+import { api, catalogProduct, supply, createTestApp, resetDb, signIn, type TestContext } from './helpers.js';
 
 let t: TestContext;
 let http: ReturnType<typeof api>;
@@ -20,17 +20,15 @@ beforeEach(async () => {
   retailer = await signIn(t, 'retailer');
   wholesaler = await signIn(t, 'wholesaler');
   await t.db.update(users).set({ phone: '+919876543210' }).where(eq(users.id, retailer.id));
-  const categoryId = (await http.post('/v1/admin/categories', admin, { name: 'Engine' })).json().id;
-  const p = (
-    await http.post('/v1/wholesaler/products', wholesaler.token, {
-      categoryId,
-      name: 'Oil Filter',
-      variants: [{ name: 'Single', mrpPaise: 50_000, pricePaise: 40_000, stockQty: 100 }],
-    })
-  ).json();
-  await http.post(`/v1/wholesaler/products/${p.id}/publish`, wholesaler.token);
-  productId = p.id;
-  variantId = p.variants[0].id;
+  const categoryId = (await http.post('/v1/admin/categories', admin, { name: 'Batteries' })).json().id;
+  const p = await catalogProduct(http, admin, {
+    categoryId,
+    name: 'Battery for Redmi Note 12',
+    variants: [{ name: '5000 mAh', mrpPaise: 50_000, pricePaise: 40_000 }],
+  });
+  productId = p.productId;
+  variantId = p.variantId;
+  await supply(http, wholesaler.token, variantId, 38_000, 100);
   addressId = (
     await http.post('/v1/me/addresses', retailer.token, {
       contactName: 'Ravi',
@@ -89,10 +87,12 @@ describe('in-app account deletion', () => {
     expect(await t.db.select({ id: orders.id }).from(orders).where(eq(orders.id, orderId))).toHaveLength(1);
   });
 
-  it('takes a deleted wholesaler’s listings down', async () => {
+  it('takes a deleted wholesaler’s stock off sale but keeps the catalog product', async () => {
     expect((await http.post('/v1/me/delete-account', wholesaler.token, { confirm: true })).statusCode).toBe(204);
+    const [offer] = await t.db.select().from(supplierOffers).where(eq(supplierOffers.wholesalerId, wholesaler.id));
+    expect(offer?.isActive).toBe(false);
     const [p] = await t.db.select({ status: products.status }).from(products).where(eq(products.id, productId));
-    expect(p?.status).toBe('hidden');
+    expect(p?.status).toBe('active');
   });
 
   it('requires explicit confirmation, works while pending, and is not for admins', async () => {
