@@ -5,6 +5,20 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Changed (2026-11-28): mobile parts, Partpoint-sourced orders, new look
+- Domain: mobile spare parts and accessories (demo catalog, copy, privacy policy, taglines).
+- Partpoint owns the catalog: the admin creates products and sets retailer prices; wholesalers keep
+  supplier offers (stock and supply price per variant). Migration `0011_admin_catalog` turns existing
+  listings into offers.
+- Every order goes to the admin first (`placed`), who forwards it to one wholesaler or splits it by item
+  (`forwarded`); retailers never see wholesaler names. A wholesaler that cannot supply hands the order
+  back instead of cancelling it. Partpoint's margin replaces the commission.
+- Admin panel: "Needs wholesaler" queue with supplier options and suggestion; catalog editor with photos
+  and every wholesaler's stock and margin.
+- Android: one-list cart and single order for retailers; wholesaler "Stock" screens replace the product
+  editor; new brand theme, logo, launcher icons, home header, product and category artwork.
+- `backend/scripts/flow-check.ts`: end-to-end check of the whole flow against a running API.
+
 ### Added
 - Initial repository setup: README (two-app architecture, flows, security, Play compliance, costs), .gitignore, .gitattributes.
 - Backend scaffold: Fastify 5 + TypeScript, Zod-validated config, Drizzle schema for all v1 tables, `/health`.

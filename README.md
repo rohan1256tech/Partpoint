@@ -1,8 +1,8 @@
 # Partpoint
 
-**A B2B spare-parts e-commerce platform connecting wholesalers, retailers, and delivery partners. An admin manages the whole network.**
+**A B2B e-commerce platform for mobile spare parts and accessories. Retailers buy from Partpoint; Partpoint sources every order from its network of wholesalers. An admin runs the whole network.**
 
-Retailers browse and order parts from wholesalers and pay online. Delivery partners pick up from the wholesaler and deliver to the retailer. The admin approves users, manages the catalog, assigns deliveries, and tracks commissions and reports.
+Retailers (repair shops and mobile stores) browse Partpoint's catalog (displays, batteries, charging ports, back panels, cameras, speakers, chargers, cables, earphones, covers, screen guards, power banks) and order from Partpoint; they never see which wholesaler supplies them. Every order goes to the admin first, who chooses the wholesaler(s) that fulfil it by stock, price and area, splitting it across wholesalers when needed. Delivery partners pick up from the wholesaler and deliver to the retailer. The admin also approves users, manages the catalog and prices, assigns deliveries, and tracks Partpoint's margin and reports.
 
 ---
 
@@ -80,20 +80,25 @@ User signs up (phone OTP or email + password) → status PENDING
 
 ### 2. Catalog
 ```
-Wholesaler adds a product (category, brand, variants, bulk price slabs, stock, photos)
-  → Photos are compressed to WebP on the device → uploaded directly to R2 via a pre-signed URL
-  → Product goes live (admin can hide or block it)
+Admin creates a product (category, brand, variants, retailer price, bulk price slabs, photos)
+  → Photos are converted to WebP in the browser → uploaded directly to R2 via a pre-signed URL
+  → Admin publishes it; retailers see one Partpoint listing per product
+Wholesalers add their stock and supply price to each variant (supplier offers) in the Partpoint app
+  → Buyable stock = the sum of active offers from approved wholesalers
 Admin manages categories, brands, banners and coupons
 ```
 
 ### 3. Order lifecycle
 ```
-RETAILER    Browse → Cart (multi-wholesaler) → Coupon → Checkout → Pay (Razorpay)
+RETAILER    Browse → Cart (one Partpoint order) → Coupon → Checkout → Pay (Razorpay)
                 │
-BACKEND     Razorpay webhook verified → stock reserved in a DB transaction
-            → cart split into one sub-order per wholesaler → GST invoice PDF generated
+ADMIN       "Needs wholesaler" queue → sees who stocks each item, supply cost and margin,
+            and a suggestion (cheapest full supplier, same city preferred)
+            → forwards to one wholesaler, or splits by item into parts PP-…-2, -3
+            → stock taken from the chosen offers, supply prices frozen
                 │
-WHOLESALER  Push "New order" → Accept → Packed
+WHOLESALER  Push "New order" → Accept → Packed (GST invoice issued)
+            or "Can't supply" → back to the admin queue (stock restored)
                 │
 ADMIN       Assigns an available delivery partner
                 │
@@ -102,7 +107,7 @@ DELIVERY    Push "New delivery" → Accept → Picked up → Out for delivery
                 │
 RETAILER    Live status updates → Rate & review → Reorder
                 │
-BACKEND     Commission computed → wholesaler payable recorded → delivery earnings recorded
+BACKEND     Partpoint margin (price − supply price) recorded → wholesaler payable recorded → delivery earnings recorded
 ```
 
 > **Current build:** online payment is deferred (see [Open Decisions](#open-decisions)). "Checkout → Pay" is
@@ -110,7 +115,7 @@ BACKEND     Commission computed → wholesaler payable recorded → delivery ear
 
 ### 4. Money flow
 ```
-Retailer pays → Platform's Razorpay account → Platform commission retained
+Retailer pays → Platform's Razorpay account → Partpoint keeps its margin (retailer price − supply price)
 → Wholesaler payout (tracked in the admin panel, settled manually in v1)
 → Delivery earnings tracked per delivery
 ```
