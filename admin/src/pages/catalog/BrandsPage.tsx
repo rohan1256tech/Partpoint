@@ -50,7 +50,7 @@ export function BrandsPage() {
       {isLoading ? (
         <Loader />
       ) : brands.length === 0 ? (
-        <EmptyState icon={IconTag} title="No brands found">Brands help retailers filter parts, e.g. Bosch, Minda, TVS. Add the ones your wholesalers sell.</EmptyState>
+        <EmptyState icon={IconTag} title="No brands found">Brands help retailers filter parts and accessories by maker. Add the ones your wholesalers stock.</EmptyState>
       ) : (
         <Table highlightOnHover>
           <Table.Thead>

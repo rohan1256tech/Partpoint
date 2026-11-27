@@ -74,7 +74,7 @@ export interface ProductSummary {
   name: string;
   partNumber: string | null;
   brandName: string | null;
-  wholesaler: { id: string; businessName: string; city: string };
+  categoryName: string;
   minPricePaise: number | null;
   mrpPaise: number | null;
   totalStock: number;
@@ -83,7 +83,37 @@ export interface ProductSummary {
   ratingCount: number;
   status: ProductStatus;
   statusReason: string | null;
+  /** Wholesalers with stock of it. */
+  supplierCount: number | null;
   createdAt: string;
+}
+
+/** A wholesaler's stock of one variant, and what Partpoint pays them for it. */
+export interface Offer {
+  wholesalerId: string;
+  businessName: string;
+  city: string;
+  state: string;
+  supplyPricePaise: number;
+  stockQty: number;
+  isActive: boolean;
+  /** The wholesaler's account can trade (approved, not deleted). */
+  usable: boolean;
+  updatedAt: string;
+}
+
+export interface Variant {
+  id: string;
+  name: string;
+  sku: string | null;
+  mrpPaise: number;
+  pricePaise: number;
+  /** Units buyers can order now, across all suppliers. */
+  stockQty: number;
+  minOrderQty: number;
+  isActive: boolean;
+  slabs: { minQty: number; pricePaise: number }[];
+  offers: Offer[] | null;
 }
 
 export interface ProductDetail {
@@ -99,19 +129,8 @@ export interface ProductDetail {
   ratingCount: number;
   category: { id: string; name: string };
   brand: { id: string; name: string } | null;
-  wholesaler: { id: string; businessName: string; city: string; state: string };
   images: { id: string; url: string; sortOrder: number }[];
-  variants: {
-    id: string;
-    name: string;
-    sku: string | null;
-    mrpPaise: number;
-    pricePaise: number;
-    stockQty: number;
-    minOrderQty: number;
-    isActive: boolean;
-    slabs: { minQty: number; pricePaise: number }[];
-  }[];
+  variants: Variant[];
   createdAt: string;
   updatedAt: string;
 }
@@ -125,6 +144,7 @@ export interface PresignedUpload {
 
 export type OrderStatus =
   | 'placed'
+  | 'forwarded'
   | 'accepted'
   | 'packed'
   | 'assigned'
@@ -139,7 +159,8 @@ export interface OrderSummary {
   status: OrderStatus;
   totalPaise: number;
   itemCount: number;
-  wholesaler: { id: string; businessName: string };
+  /** Null while the order waits for the admin to choose a wholesaler. */
+  wholesaler: { id: string; businessName: string } | null;
   retailer: { id: string; shopName: string };
   createdAt: string;
 }
@@ -159,9 +180,14 @@ export interface OrderDetail extends OrderSummary {
   subtotalPaise: number;
   discountPaise: number;
   deliveryFeePaise: number;
+  /** Partpoint's margin, once forwarded. */
   commissionPaise: number | null;
+  /** What Partpoint pays the wholesaler(s). */
+  supplyTotalPaise: number | null;
   address: Address;
   items: {
+    id: string;
+    supplyUnitPricePaise: number | null;
     productId: string;
     variantId: string;
     productName: string;
@@ -173,6 +199,8 @@ export interface OrderDetail extends OrderSummary {
     lineTotalPaise: number;
   }[];
   timeline: { status: OrderStatus; note: string | null; at: string }[];
+  /** Other parts of the same checkout, when it was split. */
+  siblings: { id: string; orderNumber: string; status: OrderStatus }[];
   cancelReason: string | null;
   deliveredAt: string | null;
   deliveryPartner: { id: string; name: string; phone: string | null } | null;
@@ -186,6 +214,33 @@ export interface OrderDetail extends OrderSummary {
     pincode: string;
     phone: string | null;
   } | null;
+}
+
+/** Who can supply a waiting order. */
+export interface SupplierOptions {
+  orderId: string;
+  status: OrderStatus;
+  deliveryArea: { city: string; state: string; pincode: string };
+  items: {
+    id: string;
+    productName: string;
+    variantName: string;
+    qty: number;
+    unitPricePaise: number;
+    offers: { wholesalerId: string; supplyPricePaise: number; stockQty: number }[];
+  }[];
+  wholesalers: {
+    id: string;
+    businessName: string;
+    city: string;
+    state: string;
+    pincode: string;
+    sameCity: boolean;
+    itemIds: string[];
+    coversAll: boolean;
+    supplyTotalPaise: number;
+  }[];
+  suggestedWholesalerId: string | null;
 }
 
 export interface DeliveryPartner {

@@ -2,9 +2,10 @@ import { Alert, Anchor, Badge, Group, Loader, Paper, SimpleGrid, Stack, Table, T
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router';
 import { api, errorMessage } from '../api/client';
-import type { Dashboard } from '../api/types';
+import type { Dashboard, OrderStatus } from '../api/types';
 import { DailyColumns } from '../components/DailyColumns';
 import { count, dateTime, humanize, rupees } from '../lib/format';
+import { ORDER_STATUS_COLOR, ORDER_STATUS_LABEL } from './orders/orderStatus';
 
 function Stat({ label, value, hint }: { label: string; value: string; hint?: string }) {
   return (
@@ -80,6 +81,14 @@ export function DashboardPage() {
         </Text>
       </Group>
 
+      {(data.orders.byStatus.placed ?? 0) > 0 && (
+        <Alert color="red" title="Orders waiting for a wholesaler">
+          {count(data.orders.byStatus.placed ?? 0)} order(s) need you to choose who fulfils them.{' '}
+          <Anchor component={Link} to="/orders?tab=placed">
+            Forward now
+          </Anchor>
+        </Alert>
+      )}
       {data.users.pendingApprovals > 0 && (
         <Alert color="yellow" title="Waiting for approval">
           {count(data.users.pendingApprovals)} account(s) need review.{' '}
@@ -92,7 +101,7 @@ export function DashboardPage() {
       <SimpleGrid cols={{ base: 1, xs: 2, md: 4 }}>
         <Stat label="GMV this month" value={rupees(data.sales.gmvThisMonthPaise, { decimals: false })} hint={`Today ${rupees(data.sales.gmvTodayPaise, { decimals: false })}`} />
         <Stat label="Orders this month" value={count(data.orders.thisMonth)} hint={`Today ${count(data.orders.today)}`} />
-        <Stat label="Commission this month" value={rupees(data.sales.commissionThisMonthPaise, { decimals: false })} hint="On delivered orders" />
+        <Stat label="Margin this month" value={rupees(data.sales.commissionThisMonthPaise, { decimals: false })} hint="On delivered orders" />
         <Stat
           label="Active businesses"
           value={count(data.users.retailers + data.users.wholesalers)}
@@ -115,8 +124,8 @@ export function DashboardPage() {
           <Group gap="xs">
             {Object.entries(data.orders.byStatus).length === 0 && <Text c="dimmed" size="sm">No orders yet</Text>}
             {Object.entries(data.orders.byStatus).map(([status, n]) => (
-              <Badge key={status} variant="light" color="gray" size="lg" radius="sm">
-                {humanize(status)}: {count(n)}
+              <Badge key={status} variant="light" color={ORDER_STATUS_COLOR[status as OrderStatus] ?? 'gray'} size="lg" radius="sm">
+                {ORDER_STATUS_LABEL[status as OrderStatus] ?? humanize(status)}: {count(n)}
               </Badge>
             ))}
           </Group>

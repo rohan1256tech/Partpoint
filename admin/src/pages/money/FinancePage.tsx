@@ -13,7 +13,8 @@ import { EmptyState } from '../../components/EmptyState';
 
 /**
  * Payouts are settled manually by bank transfer in v1; this page records them.
- * A wholesaler is owed the goods value of delivered orders minus commission.
+ * A wholesaler is owed the supply price of the goods in their delivered orders: the goods value
+ * minus Partpoint's margin.
  */
 export function FinancePage() {
   return (
@@ -57,7 +58,7 @@ function Wholesalers() {
             <Table.Th>Wholesaler</Table.Th>
             <Table.Th ta="right">Delivered orders</Table.Th>
             <Table.Th ta="right">Goods value</Table.Th>
-            <Table.Th ta="right">Commission</Table.Th>
+            <Table.Th ta="right">Partpoint margin</Table.Th>
             <Table.Th ta="right">Paid</Table.Th>
             <Table.Th ta="right">Balance due</Table.Th>
           </Table.Tr>

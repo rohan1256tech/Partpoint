@@ -1,49 +1,37 @@
-import {
-  Alert,
-  Badge,
-  Button,
-  Drawer,
-  Group,
-  Image,
-  Loader,
-  SegmentedControl,
-  Select,
-  SimpleGrid,
-  Stack,
-  Table,
-  Text,
-  Textarea,
-  TextInput,
-  Title,
-} from '@mantine/core';
+import { Alert, Badge, Button, Checkbox, Group, Loader, SegmentedControl, Select, Stack, Table, Text, TextInput, Title } from '@mantine/core';
 import { useDebouncedValue } from '@mantine/hooks';
+import { IconPackage, IconPlus } from '@tabler/icons-react';
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
 import { useSearchParams } from 'react-router';
 import { api, errorMessage } from '../../api/client';
-import type { Page, ProductDetail, ProductStatus, ProductSummary, PublicUser } from '../../api/types';
-import { count, dateTime, humanize, rupees } from '../../lib/format';
-import { useAction } from '../../lib/mutations';
-import { Thumb } from '../../components/Thumb';
-import { rowLink } from '../../lib/rowLink';
-import { IconPackage } from '@tabler/icons-react';
+import type { Category, Page, ProductStatus, ProductSummary, PublicUser } from '../../api/types';
 import { EmptyState } from '../../components/EmptyState';
+import { Thumb } from '../../components/Thumb';
+import { count, humanize, rupees } from '../../lib/format';
+import { rowLink } from '../../lib/rowLink';
+import { ProductEditor } from './ProductEditor';
 
 const STATUS_COLOR: Record<ProductStatus, string> = { draft: 'gray', active: 'green', hidden: 'yellow', blocked: 'red' };
 
 export function ProductStatusBadge({ status }: { status: ProductStatus }) {
   return (
     <Badge variant="light" color={STATUS_COLOR[status]}>
-      {humanize(status)}
+      {status === 'active' ? 'Live' : humanize(status)}
     </Badge>
   );
 }
 
-/** Moderation: wholesalers own their listings; the admin can block (with a reason) and unblock. */
+/**
+ * Partpoint's catalog. The admin creates products and sets what retailers pay; wholesalers add
+ * their stock and supply price to each variant from the Partpoint app.
+ */
 export function ProductsPage() {
   const [params, setParams] = useSearchParams();
   const status = params.get('status') ?? 'all';
   const wholesalerId = params.get('wholesalerId') ?? '';
+  const categoryId = params.get('categoryId') ?? '';
+  const outOfStock = params.get('stock') === 'out';
   const [q, setQ] = useState('');
   const [debouncedQ] = useDebouncedValue(q.trim(), 300);
   const [openId, setOpenId] = useState<string | null>(null);
@@ -52,14 +40,20 @@ export function ProductsPage() {
     queryKey: ['wholesalers', 'approved'],
     queryFn: () => api.get<Page<PublicUser>>('/v1/admin/users', { role: 'wholesaler', limit: 100 }),
   });
+  const categories = useQuery({
+    queryKey: ['admin-categories'],
+    queryFn: () => api.get<{ items: Category[] }>('/v1/admin/categories'),
+  });
 
   const list = useInfiniteQuery({
-    queryKey: ['products', status, wholesalerId, debouncedQ],
+    queryKey: ['products', status, wholesalerId, categoryId, outOfStock, debouncedQ],
     initialPageParam: undefined as string | undefined,
     queryFn: ({ pageParam }) =>
       api.get<Page<ProductSummary>>('/v1/admin/products', {
         status: status === 'all' ? undefined : status,
         wholesalerId: wholesalerId || undefined,
+        categoryId: categoryId || undefined,
+        stock: outOfStock ? 'out' : undefined,
         q: debouncedQ.length >= 2 ? debouncedQ : undefined,
         cursor: pageParam,
         limit: 50,
@@ -74,42 +68,71 @@ export function ProductsPage() {
     else next.delete(key);
     setParams(next, { replace: true });
   };
+  const cats = categories.data?.items ?? [];
+  const catLabel = (c: Category) => {
+    const parent = cats.find((p) => p.id === c.parentId);
+    return parent ? `${parent.name} › ${c.name}` : c.name;
+  };
 
   return (
     <Stack>
-      <Title order={2}>Products</Title>
+      <Group justify="space-between">
+        <Title order={2}>Products</Title>
+        <Button leftSection={<IconPlus size={16} />} onClick={() => setOpenId('new')}>
+          New product
+        </Button>
+      </Group>
       <Group align="flex-end">
         <SegmentedControl
           value={status}
           onChange={(v) => set('status', v)}
-          data={['all', 'active', 'draft', 'hidden', 'blocked'].map((s) => ({ value: s, label: humanize(s) }))}
+          data={[
+            { value: 'all', label: 'All' },
+            { value: 'active', label: 'Live' },
+            { value: 'draft', label: 'Draft' },
+            { value: 'hidden', label: 'Hidden' },
+          ]}
         />
         <Select
-          placeholder="All wholesalers"
+          placeholder="All categories"
+          clearable
+          searchable
+          value={categoryId || null}
+          onChange={(v) => set('categoryId', v ?? '')}
+          data={cats.map((c) => ({ value: c.id, label: catLabel(c) }))}
+          w={240}
+          aria-label="Category"
+        />
+        <Select
+          placeholder="Any supplier"
           clearable
           searchable
           value={wholesalerId || null}
           onChange={(v) => set('wholesalerId', v ?? '')}
           data={(wholesalers.data?.items ?? []).map((w) => ({ value: w.id, label: w.name }))}
-          w={240}
-          aria-label="Wholesaler"
+          w={220}
+          aria-label="Supplied by"
         />
-        <TextInput placeholder="Search name or part number" value={q} onChange={(e) => setQ(e.currentTarget.value)} w={260} aria-label="Search" />
+        <TextInput placeholder="Search name, part no. or brand" value={q} onChange={(e) => setQ(e.currentTarget.value)} w={260} aria-label="Search" />
+        <Checkbox label="Out of stock" checked={outOfStock} onChange={(e) => set('stock', e.currentTarget.checked ? 'out' : '')} mb={8} />
       </Group>
 
       {list.error && <Alert color="red">{errorMessage(list.error)}</Alert>}
       {list.isLoading ? (
         <Loader />
       ) : products.length === 0 ? (
-        <EmptyState icon={IconPackage} title="No products match">Wholesalers add products in the Partpoint app. Try another status, wholesaler or search.</EmptyState>
+        <EmptyState icon={IconPackage} title="No products match">
+          Create products with “New product”; wholesalers then add their stock in the Partpoint app.
+        </EmptyState>
       ) : (
         <Table highlightOnHover verticalSpacing="xs">
           <Table.Thead>
             <Table.Tr>
               <Table.Th>Product</Table.Th>
-              <Table.Th>Wholesaler</Table.Th>
-              <Table.Th ta="right">From</Table.Th>
-              <Table.Th ta="right">Stock</Table.Th>
+              <Table.Th>Category</Table.Th>
+              <Table.Th ta="right">Price from</Table.Th>
+              <Table.Th ta="right">In stock</Table.Th>
+              <Table.Th ta="right">Suppliers</Table.Th>
               <Table.Th>Status</Table.Th>
             </Table.Tr>
           </Table.Thead>
@@ -130,13 +153,13 @@ export function ProductsPage() {
                   </Group>
                 </Table.Td>
                 <Table.Td>
-                  <Text size="sm">{p.wholesaler.businessName}</Text>
-                  <Text size="xs" c="dimmed">
-                    {p.wholesaler.city}
-                  </Text>
+                  <Text size="sm">{p.categoryName}</Text>
                 </Table.Td>
                 <Table.Td ta="right">{p.minPricePaise !== null ? rupees(p.minPricePaise) : '—'}</Table.Td>
-                <Table.Td ta="right">{count(p.totalStock)}</Table.Td>
+                <Table.Td ta="right" c={p.totalStock === 0 ? 'red' : undefined}>
+                  {p.totalStock === 0 ? 'Out of stock' : count(p.totalStock)}
+                </Table.Td>
+                <Table.Td ta="right">{count(p.supplierCount ?? 0)}</Table.Td>
                 <Table.Td>
                   <ProductStatusBadge status={p.status} />
                 </Table.Td>
@@ -151,124 +174,7 @@ export function ProductsPage() {
         </Button>
       )}
 
-      <ProductDrawer productId={openId} onClose={() => setOpenId(null)} />
+      <ProductEditor productId={openId} onOpen={setOpenId} onClose={() => setOpenId(null)} />
     </Stack>
-  );
-}
-
-function ProductDrawer({ productId, onClose }: { productId: string | null; onClose: () => void }) {
-  const [reason, setReason] = useState('');
-  const detail = useQuery({
-    queryKey: ['product', productId],
-    queryFn: () => api.get<ProductDetail>(`/v1/admin/products/${productId}`),
-    enabled: !!productId,
-  });
-  const moderate = useAction({
-    run: (action: 'block' | 'unblock') =>
-      api.post<ProductDetail>(`/v1/admin/products/${productId}/${action}`, action === 'block' ? { reason: reason.trim() } : {}),
-    success: (_p: ProductDetail, action) => (action === 'block' ? 'Product blocked' : 'Product unblocked (hidden until the wholesaler publishes it)'),
-    invalidate: [['products'], ['product', productId]],
-    onDone: () => setReason(''),
-  });
-
-  const p = detail.data;
-  return (
-    <Drawer opened={!!productId} onClose={onClose} position="right" size="lg" title={p?.name ?? 'Product'}>
-      {detail.isLoading || !p ? (
-        <Loader />
-      ) : (
-        <Stack>
-          <Group>
-            <ProductStatusBadge status={p.status} />
-            <Text size="sm" c="dimmed">
-              {p.wholesaler.businessName}, {p.wholesaler.city} · updated {dateTime(p.updatedAt)}
-            </Text>
-          </Group>
-          {p.statusReason && <Alert color="red" title="Blocked">{p.statusReason}</Alert>}
-
-          {p.images.length > 0 && (
-            <SimpleGrid cols={4}>
-              {p.images.map((img) => (
-                <Image key={img.id} src={img.url} radius="sm" h={96} fit="cover" alt="" />
-              ))}
-            </SimpleGrid>
-          )}
-
-          <Table fz="sm" verticalSpacing={4}>
-            <Table.Tbody>
-              <Info label="Category" value={p.category.name} />
-              <Info label="Brand" value={p.brand?.name ?? null} />
-              <Info label="Part number" value={p.partNumber} />
-              <Info label="HSN / GST" value={`${p.hsnCode ?? '—'} / ${p.gstRateBps / 100}%`} />
-              <Info label="Rating" value={p.ratingCount ? `${p.ratingAvg.toFixed(1)} (${p.ratingCount})` : null} />
-            </Table.Tbody>
-          </Table>
-          {p.description && (
-            <Text size="sm" style={{ whiteSpace: 'pre-wrap' }}>
-              {p.description}
-            </Text>
-          )}
-
-          <Text fw={600}>Variants</Text>
-          <Table fz="sm">
-            <Table.Thead>
-              <Table.Tr>
-                <Table.Th>Variant</Table.Th>
-                <Table.Th ta="right">MRP</Table.Th>
-                <Table.Th ta="right">Price</Table.Th>
-                <Table.Th ta="right">Stock</Table.Th>
-                <Table.Th>Bulk prices</Table.Th>
-              </Table.Tr>
-            </Table.Thead>
-            <Table.Tbody>
-              {p.variants.map((v) => (
-                <Table.Tr key={v.id} c={v.isActive ? undefined : 'dimmed'}>
-                  <Table.Td>
-                    {v.name}
-                    {!v.isActive && ' (inactive)'}
-                  </Table.Td>
-                  <Table.Td ta="right">{rupees(v.mrpPaise)}</Table.Td>
-                  <Table.Td ta="right">{rupees(v.pricePaise)}</Table.Td>
-                  <Table.Td ta="right">{count(v.stockQty)}</Table.Td>
-                  <Table.Td>
-                    {v.slabs.length ? v.slabs.map((s) => `${s.minQty}+ @ ${rupees(s.pricePaise)}`).join(', ') : '—'}
-                  </Table.Td>
-                </Table.Tr>
-              ))}
-            </Table.Tbody>
-          </Table>
-
-          {p.status === 'blocked' ? (
-            <Button variant="light" onClick={() => moderate.mutate('unblock')} loading={moderate.isPending}>
-              Unblock
-            </Button>
-          ) : (
-            <Stack gap="xs">
-              <Textarea
-                label="Reason for blocking"
-                description="The wholesaler sees this reason. Blocked products disappear from the app at once."
-                value={reason}
-                maxLength={500}
-                onChange={(e) => setReason(e.currentTarget.value)}
-              />
-              <Button color="red" variant="light" disabled={!reason.trim()} onClick={() => moderate.mutate('block')} loading={moderate.isPending}>
-                Block product
-              </Button>
-            </Stack>
-          )}
-        </Stack>
-      )}
-    </Drawer>
-  );
-}
-
-function Info({ label, value }: { label: string; value: string | null }) {
-  return (
-    <Table.Tr>
-      <Table.Td c="dimmed" w={130}>
-        {label}
-      </Table.Td>
-      <Table.Td>{value ?? '—'}</Table.Td>
-    </Table.Tr>
   );
 }
