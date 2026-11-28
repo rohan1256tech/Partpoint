@@ -1,6 +1,6 @@
-# Partpoint
+# Sakshay Connect (code name Partpoint)
 
-**A B2B e-commerce platform for mobile spare parts and accessories. Retailers buy from Partpoint; Partpoint sources every order from its network of wholesalers. An admin runs the whole network.**
+**A B2B e-commerce platform for mobile spare parts and accessories. Retailers buy from Sakshay Connect; Sakshay Connect sources every order from its network of wholesalers. An admin runs the whole network.**
 
 Retailers (repair shops and mobile stores) browse Partpoint's catalog (displays, batteries, charging ports, back panels, cameras, speakers, chargers, cables, earphones, covers, screen guards, power banks) and order from Partpoint; they never see which wholesaler supplies them. Every order goes to the admin first, who chooses the wholesaler(s) that fulfil it by stock, price and area, splitting it across wholesalers when needed. Delivery partners pick up from the wholesaler and deliver to the retailer. The admin also approves users, manages the catalog and prices, assigns deliveries, and tracks Partpoint's margin and reports.
 
@@ -102,7 +102,8 @@ WHOLESALER  Push "New order" → Accept → Packed (GST invoice issued)
                 │
 ADMIN       Assigns an available delivery partner
                 │
-DELIVERY    Push "New delivery" → Accept → Picked up → Out for delivery
+DELIVERY    Push "Order ready for pickup" to every available rider → first to take it gets it
+            (or the admin assigns one) → Picked up → Out for delivery
             → Delivered (retailer shares the delivery OTP)
                 │
 RETAILER    Live status updates → Rate & review → Reorder

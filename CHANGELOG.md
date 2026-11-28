@@ -5,6 +5,12 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Changed (2026-11-28): Sakshay Connect
+- Renamed to Sakshay Connect (retailer and wholesaler app) and Sakshay Connect Delivery; black and yellow
+  brand, new logo, launcher icons and splash. Order and invoice numbers now start with SC.
+- Packed orders are offered to every available rider; the first to take one gets it (`/v1/delivery/jobs`).
+- Retailer home with delivery location, promo card and quick actions; vertical order tracking timeline.
+
 ### Changed (2026-11-28): mobile parts, Partpoint-sourced orders, new look
 - Domain: mobile spare parts and accessories (demo catalog, copy, privacy policy, taglines).
 - Partpoint owns the catalog: the admin creates products and sets retailer prices; wholesalers keep
