@@ -208,8 +208,12 @@ jobs:
             sed -i '/^API_IMAGE=/d' .env
             echo "API_IMAGE=$API_IMAGE" >> .env
 
+            # The database must be up for migrations (also on the very first deploy).
+            docker compose -f docker-compose.yml up -d --wait --no-build postgres
             docker compose -f docker-compose.yml run --rm --no-deps api node dist/db/migrate.js
-            docker compose -f docker-compose.yml up -d --no-deps --no-build api
+            # Recreates api with the new image; starts caddy if it is not running yet. Postgres is
+            # left alone when unchanged.
+            docker compose -f docker-compose.yml up -d --no-build
 
             for i in $(seq 1 30); do
               if docker compose -f docker-compose.yml exec -T api wget -qO- http://127.0.0.1:3000/health; then
