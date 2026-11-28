@@ -7,7 +7,7 @@ export const deletionPage = `<!doctype html>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Delete your Partpoint account</title>
+<title>Delete your Sakshay Connect account</title>
 <style>
   :root { color-scheme: light dark; --fg: #1a1a1a; --muted: #5c5c5c; --bg: #fff; --line: #d9d9d9; --accent: #b42318; }
   @media (prefers-color-scheme: dark) { :root { --fg: #ececec; --muted: #a3a3a3; --bg: #141414; --line: #333; --accent: #f97066; } }
@@ -27,9 +27,9 @@ export const deletionPage = `<!doctype html>
 </head>
 <body>
 <main>
-  <h1>Delete your Partpoint account</h1>
-  <p>This page is for the <strong>Partpoint</strong> and <strong>Partpoint Delivery</strong> apps.
-     The quickest way is in the app: <em>Profile → Delete account</em>. You can also ask us here.</p>
+  <h1>Delete your Sakshay Connect account</h1>
+  <p>This page is for the <strong>Sakshay Connect</strong> and <strong>Sakshay Connect Delivery</strong> apps.
+     The quickest way is in the app: <em>Account → Delete account</em>. You can also ask us here.</p>
 
   <h2>What is deleted</h2>
   <ul>

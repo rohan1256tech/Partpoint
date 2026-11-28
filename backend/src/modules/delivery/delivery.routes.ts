@@ -26,6 +26,13 @@ export const deliveryRoutes: FastifyPluginAsync<Deps> = async (app, { delivery, 
     delivery.setAvailability(me(req), parse(z.object({ isAvailable: z.boolean() }), req.body).isAvailable),
   );
 
+  /** Packed orders no rider has taken: the first to take one gets it. */
+  app.get('/jobs', async () => ({ items: await delivery.openJobs() }));
+  app.post('/jobs/:id/take', async (req) => {
+    await delivery.claim(me(req), id(req));
+    return orders.get('delivery', me(req), id(req));
+  });
+
   app.get('/orders', async (req) => orders.list('delivery', me(req), parse(listOrdersQuery, req.query)));
   app.get('/orders/:id', async (req) => orders.get('delivery', me(req), id(req)));
 

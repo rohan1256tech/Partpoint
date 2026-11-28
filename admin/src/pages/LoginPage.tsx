@@ -1,4 +1,5 @@
-import { Alert, Anchor, Button, Center, Paper, PasswordInput, PinInput, Stack, Text, TextInput, Title } from '@mantine/core';
+import { Alert, Anchor, Box, Button, Center, Paper, PasswordInput, PinInput, SimpleGrid, Stack, Text, TextInput, Title } from '@mantine/core';
+import { Wordmark } from '../components/BrandMark';
 import { useState, type FormEvent } from 'react';
 import { errorMessage } from '../api/client';
 import { useSession } from '../auth/context';
@@ -45,12 +46,35 @@ export function LoginPage() {
   };
 
   return (
-    <Center mih="100vh" p="md">
-      <Paper withBorder radius="md" p="xl" w={380} shadow="sm">
+    <SimpleGrid cols={{ base: 1, md: 2 }} spacing={0} mih="100vh">
+      <Box visibleFrom="md" pos="relative" style={{ backgroundImage: 'url(/login-hero.jpg)', backgroundSize: 'cover', backgroundPosition: 'center' }}>
+        <Box pos="absolute" inset={0} style={{ background: 'linear-gradient(160deg, rgba(11,11,13,0.55) 0%, rgba(11,11,13,0.92) 75%)' }} />
+        <Stack pos="absolute" inset={0} p={48} justify="space-between">
+          <Wordmark onDark size={40} />
+          <div>
+            <Text c="#FFC51A" fw={700} size="sm" style={{ letterSpacing: '0.12em' }}>
+              PARTS. PRICE. FAST DELIVERY.
+            </Text>
+            <Title order={1} c="white" mt="xs" fz={40} lh={1.15}>
+              Run the whole network
+              <br />
+              from one place.
+            </Title>
+            <Text c="gray.4" mt="md" maw={440}>
+              Approve businesses, keep the catalog sharp, send every order to the right wholesaler and get it delivered.
+            </Text>
+          </div>
+        </Stack>
+      </Box>
+      <Center p="xl">
+      <Paper withBorder p="xl" w="100%" maw={400} shadow="md">
+        <Box hiddenFrom="md" mb="lg">
+          <Wordmark size={34} />
+        </Box>
         <Stack gap="xs" mb="lg">
-          <Title order={2}>Partpoint Admin</Title>
+          <Title order={2}>{challenge ? 'Two-step verification' : 'Welcome back'}</Title>
           <Text c="dimmed" size="sm">
-            {challenge ? 'Enter the 6-digit code from your authenticator app.' : 'Sign in to manage the platform.'}
+            {challenge ? 'Enter the 6-digit code from your authenticator app.' : 'Sign in to the Sakshay Connect admin console.'}
           </Text>
         </Stack>
 
@@ -113,6 +137,7 @@ export function LoginPage() {
           </Stack>
         )}
       </Paper>
-    </Center>
+      </Center>
+    </SimpleGrid>
   );
 }

@@ -10,7 +10,7 @@ import {
   deliveryProfiles,
   orders,
   otpCodes,
-  products,
+  supplierOffers,
   pushTokens,
   retailerProfiles,
   sessions,
@@ -146,11 +146,8 @@ export class AccountService {
       await tx.update(retailerProfiles).set({ shopName: 'Deleted shop', gstin: null }).where(eq(retailerProfiles.userId, userId));
     }
     if (u.role === 'wholesaler') {
-      // The business record stays for tax purposes; its listings are taken down.
-      await tx
-        .update(products)
-        .set({ status: 'hidden' })
-        .where(and(eq(products.wholesalerId, userId), notInArray(products.status, ['blocked'])));
+      // The business record stays for tax purposes; its stock is taken off sale.
+      await tx.update(supplierOffers).set({ isActive: false, stockQty: 0 }).where(eq(supplierOffers.wholesalerId, userId));
     }
     if (u.role === 'delivery') {
       await tx
@@ -232,7 +229,15 @@ export const accountRoutes: FastifyPluginAsync<Deps> = async (app, { account, au
 };
 
 /** Public: the web page and form linked from the Play Store listing. */
-export const publicAccountRoutes: FastifyPluginAsync<Deps> = async (app, { account }) => {
+export const publicAccountRoutes: FastifyPluginAsync<Deps & { privacyHtml: string }> = async (app, { account, privacyHtml }) => {
+  // Linked from the Play listing, the Data safety form, the signup consent and the apps' Account screen.
+  app.get('/privacy', async (_req, reply) =>
+    reply
+      .header('content-type', 'text/html; charset=utf-8')
+      .header('content-security-policy', "default-src 'none'; style-src 'unsafe-inline'")
+      .header('cache-control', 'public, max-age=3600')
+      .send(privacyHtml),
+  );
   app.get('/account/delete', async (_req, reply) =>
     reply
       .header('content-type', 'text/html; charset=utf-8')

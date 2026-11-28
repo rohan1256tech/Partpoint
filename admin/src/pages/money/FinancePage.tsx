@@ -7,10 +7,14 @@ import type { Payout, RiderBalance, WholesalerBalance } from '../../api/types';
 import { RupeeInput } from '../../components/MoneyInput';
 import { count, dateTime, rupees } from '../../lib/format';
 import { useAction } from '../../lib/mutations';
+import { rowLink } from '../../lib/rowLink';
+import { IconCash } from '@tabler/icons-react';
+import { EmptyState } from '../../components/EmptyState';
 
 /**
  * Payouts are settled manually by bank transfer in v1; this page records them.
- * A wholesaler is owed the goods value of delivered orders minus commission.
+ * A wholesaler is owed the supply price of the goods in their delivered orders: the goods value
+ * minus Sakshay Connect's margin.
  */
 export function FinancePage() {
   return (
@@ -54,14 +58,14 @@ function Wholesalers() {
             <Table.Th>Wholesaler</Table.Th>
             <Table.Th ta="right">Delivered orders</Table.Th>
             <Table.Th ta="right">Goods value</Table.Th>
-            <Table.Th ta="right">Commission</Table.Th>
+            <Table.Th ta="right">Margin</Table.Th>
             <Table.Th ta="right">Paid</Table.Th>
             <Table.Th ta="right">Balance due</Table.Th>
           </Table.Tr>
         </Table.Thead>
         <Table.Tbody>
           {rows.map((r) => (
-            <Table.Tr key={r.wholesalerId} style={{ cursor: 'pointer' }} onClick={() => setSelected(r)}>
+            <Table.Tr key={r.wholesalerId} {...rowLink(() => setSelected(r))}>
               <Table.Td fw={600}>{r.businessName}</Table.Td>
               <Table.Td ta="right">{count(r.deliveredOrders)}</Table.Td>
               <Table.Td ta="right">{rupees(r.goodsPaise)}</Table.Td>
@@ -178,7 +182,7 @@ function Riders() {
   return (
     <Stack>
       {rows.length === 0 ? (
-        <Text c="dimmed">All rider earnings are paid.</Text>
+        <EmptyState icon={IconCash} title="All rider earnings are paid">Earnings appear here after each delivered order.</EmptyState>
       ) : (
         <Table>
           <Table.Thead>

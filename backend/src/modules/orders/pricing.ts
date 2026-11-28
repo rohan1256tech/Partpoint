@@ -3,20 +3,17 @@
  * Prices are GST-inclusive (they are capped by MRP, which is inclusive by law).
  */
 
-export interface PricedGroup {
-  wholesalerId: string;
-  subtotalPaise: number;
-  /** Wholesaler-specific commission override, if any. */
-  commissionBps: number | null;
-}
-
-export interface GroupTotals {
-  wholesalerId: string;
+export interface OrderTotals {
   subtotalPaise: number;
   discountPaise: number;
   deliveryFeePaise: number;
   totalPaise: number;
-  commissionPaise: number;
+}
+
+/** Totals of one order; the discount never exceeds the subtotal. */
+export function orderTotals(subtotalPaise: number, discountPaise: number, deliveryFeePaise: number): OrderTotals {
+  const discount = Math.min(discountPaise, subtotalPaise);
+  return { subtotalPaise, discountPaise: discount, deliveryFeePaise, totalPaise: subtotalPaise - discount + deliveryFeePaise };
 }
 
 /**
@@ -37,31 +34,22 @@ export function allocate(total: number, weights: readonly number[]): number[] {
   return parts;
 }
 
-export function commissionFor(goodsPaise: number, bps: number): number {
-  return Math.floor((goodsPaise * bps) / 10_000);
+/**
+ * Splitting an order across wholesalers: the coupon discount is shared by subtotal, and the
+ * delivery fee stays on the first part (the retailer paid it once). The parts add up exactly
+ * to the original order.
+ */
+export function splitTotals(
+  partSubtotals: readonly number[],
+  original: Pick<OrderTotals, 'discountPaise' | 'deliveryFeePaise'>,
+): OrderTotals[] {
+  const discounts = allocate(original.discountPaise, partSubtotals);
+  return partSubtotals.map((sub, i) => orderTotals(sub, discounts[i] as number, i === 0 ? original.deliveryFeePaise : 0));
 }
 
-/** Per-wholesaler totals: coupon discount shared by subtotal, flat delivery fee each, commission on goods. */
-export function priceOrderGroups(
-  groups: readonly PricedGroup[],
-  opts: { discountPaise: number; deliveryFeePaise: number; defaultCommissionBps: number },
-): GroupTotals[] {
-  const discounts = allocate(
-    opts.discountPaise,
-    groups.map((g) => g.subtotalPaise),
-  );
-  return groups.map((g, i) => {
-    const discountPaise = discounts[i] as number;
-    const goods = g.subtotalPaise - discountPaise;
-    return {
-      wholesalerId: g.wholesalerId,
-      subtotalPaise: g.subtotalPaise,
-      discountPaise,
-      deliveryFeePaise: opts.deliveryFeePaise,
-      totalPaise: goods + opts.deliveryFeePaise,
-      commissionPaise: commissionFor(goods, g.commissionBps ?? opts.defaultCommissionBps),
-    };
-  });
+/** Partpoint's margin on a forwarded order: goods value after discount, minus what the wholesaler is paid. */
+export function marginFor(totals: Pick<OrderTotals, 'subtotalPaise' | 'discountPaise'>, supplyTotalPaise: number): number {
+  return totals.subtotalPaise - totals.discountPaise - supplyTotalPaise;
 }
 
 export interface CouponTerms {

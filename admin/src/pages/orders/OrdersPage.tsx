@@ -1,4 +1,4 @@
-import { Alert, Button, Group, Loader, Select, Stack, Table, Tabs, Text, Title } from '@mantine/core';
+import { Alert, Badge, Button, Group, Loader, Select, Stack, Table, Tabs, Title } from '@mantine/core';
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
 import { useSearchParams } from 'react-router';
@@ -7,11 +7,18 @@ import type { OrderStatus, OrderSummary, Page, PublicUser } from '../../api/type
 import { count, dateTime, rupees } from '../../lib/format';
 import { OrderDrawer } from './OrderDrawer';
 import { OrderStatusBadge } from './OrderStatusBadge';
+import { rowLink } from '../../lib/rowLink';
+import { IconReceipt } from '@tabler/icons-react';
+import { EmptyState } from '../../components/EmptyState';
 
-/** Tabs follow the operator's work: what needs a rider, what is on the road, what is done. */
+/**
+ * Tabs follow the operator's work: every new order needs a wholesaler first, then a rider once
+ * it is packed.
+ */
 const TABS: { value: string; label: string; query: { status?: OrderStatus; scope?: 'active' | 'history' } }[] = [
   { value: 'all', label: 'All', query: {} },
-  { value: 'placed', label: 'New', query: { status: 'placed' } },
+  { value: 'placed', label: 'Needs wholesaler', query: { status: 'placed' } },
+  { value: 'forwarded', label: 'With wholesaler', query: { status: 'forwarded' } },
   { value: 'accepted', label: 'Accepted', query: { status: 'accepted' } },
   { value: 'packed', label: 'Needs a rider', query: { status: 'packed' } },
   { value: 'active', label: 'Out with riders', query: { scope: 'active' } },
@@ -30,6 +37,13 @@ export function OrdersPage() {
     queryKey: ['wholesalers', 'approved'],
     queryFn: () => api.get<Page<PublicUser>>('/v1/admin/users', { role: 'wholesaler', limit: 100 }),
   });
+
+  const waiting = useQuery({
+    queryKey: ['orders', 'waiting-count'],
+    queryFn: () => api.get<Page<OrderSummary>>('/v1/admin/orders', { status: 'placed', limit: 50 }),
+    refetchInterval: 30_000,
+  });
+  const waitingCount = waiting.data?.items.length ?? 0;
 
   const list = useInfiniteQuery({
     queryKey: ['orders', tab, wholesalerId],
@@ -59,7 +73,17 @@ export function OrdersPage() {
       <Tabs value={tab} onChange={(v) => set('tab', v)}>
         <Tabs.List>
           {TABS.map((t) => (
-            <Tabs.Tab key={t.value} value={t.value}>
+            <Tabs.Tab
+              key={t.value}
+              value={t.value}
+              rightSection={
+                t.value === 'placed' && waitingCount > 0 ? (
+                  <Badge size="sm" color="red" circle={waitingCount < 10}>
+                    {waitingCount >= 50 ? '50+' : waitingCount}
+                  </Badge>
+                ) : null
+              }
+            >
               {t.label}
             </Tabs.Tab>
           ))}
@@ -80,7 +104,7 @@ export function OrdersPage() {
       {list.isLoading ? (
         <Loader />
       ) : orders.length === 0 ? (
-        <Text c="dimmed">No orders here.</Text>
+        <EmptyState icon={IconReceipt} title="No orders here">Orders appear as soon as retailers place them. Try another tab or wholesaler.</EmptyState>
       ) : (
         <Table highlightOnHover verticalSpacing="xs">
           <Table.Thead>
@@ -96,12 +120,12 @@ export function OrdersPage() {
           </Table.Thead>
           <Table.Tbody>
             {orders.map((o) => (
-              <Table.Tr key={o.id} style={{ cursor: 'pointer' }} onClick={() => setOpenId(o.id)}>
+              <Table.Tr key={o.id} {...rowLink(() => setOpenId(o.id))}>
                 <Table.Td ff="monospace" fz="sm">
                   {o.orderNumber}
                 </Table.Td>
                 <Table.Td>{o.retailer.shopName}</Table.Td>
-                <Table.Td>{o.wholesaler.businessName}</Table.Td>
+                <Table.Td c={o.wholesaler ? undefined : 'dimmed'}>{o.wholesaler?.businessName ?? '—'}</Table.Td>
                 <Table.Td ta="right">{count(o.itemCount)}</Table.Td>
                 <Table.Td ta="right">{rupees(o.totalPaise)}</Table.Td>
                 <Table.Td>

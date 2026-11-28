@@ -37,5 +37,8 @@ describe('loadEnv', () => {
     })();
     expect(message).toMatch(/JWT_SECRET: placeholder/);
     expect(message).toMatch(/SMS_API_KEY: required in production/);
+    // The public privacy policy must name the business and a grievance contact.
+    expect(message).toMatch(/LEGAL_NAME: required in production/);
+    expect(message).toMatch(/PRIVACY_EMAIL: required in production/);
   });
 });

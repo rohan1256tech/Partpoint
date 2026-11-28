@@ -11,15 +11,20 @@ import {
   Table,
   Text,
   Textarea,
+  TextInput,
   Title,
 } from '@mantine/core';
+import { useDebouncedValue } from '@mantine/hooks';
 import { notifications } from '@mantine/notifications';
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { useSearchParams } from 'react-router';
 import { api, errorMessage } from '../api/client';
-import type { Page, PublicUser, UserStatus, UserWithProfile } from '../api/types';
+import type { Page, UserListItem, UserStatus, UserWithProfile } from '../api/types';
 import { date, dateTime, humanize } from '../lib/format';
+import { rowLink } from '../lib/rowLink';
+import { IconSearch, IconUsers } from '@tabler/icons-react';
+import { EmptyState } from '../components/EmptyState';
 
 const STATUS_COLOR: Record<UserStatus, string> = { pending: 'yellow', approved: 'green', blocked: 'red' };
 
@@ -36,14 +41,17 @@ export function UsersPage() {
   const status = (params.get('status') ?? 'pending') as UserStatus | 'all';
   const role = params.get('role') ?? '';
   const [openId, setOpenId] = useState<string | null>(null);
+  const [search, setSearch] = useState('');
+  const [q] = useDebouncedValue(search.trim(), 300);
 
   const list = useInfiniteQuery({
-    queryKey: ['users', status, role],
+    queryKey: ['users', status, role, q],
     initialPageParam: undefined as string | undefined,
     queryFn: ({ pageParam }) =>
-      api.get<Page<PublicUser>>('/v1/admin/users', {
+      api.get<Page<UserListItem>>('/v1/admin/users', {
         status: status === 'all' ? undefined : status,
         role: role || undefined,
+        q: q.length >= 2 ? q : undefined,
         cursor: pageParam,
         limit: 50,
       }),
@@ -85,18 +93,28 @@ export function UsersPage() {
           w={190}
           aria-label="Role"
         />
+        <TextInput
+          placeholder="Search name, shop, phone or email"
+          leftSection={<IconSearch size={16} />}
+          value={search}
+          onChange={(e) => setSearch(e.currentTarget.value)}
+          w={300}
+          aria-label="Search users"
+        />
       </Group>
 
       {list.error && <Alert color="red">{errorMessage(list.error)}</Alert>}
       {list.isLoading ? (
         <Loader />
       ) : users.length === 0 ? (
-        <Text c="dimmed">No users here.</Text>
+        <EmptyState icon={IconUsers} title={q ? 'No one matches your search' : 'No accounts here'}>
+          {q ? 'Try a different name, shop, phone number or email.' : 'New retailers, wholesalers and riders appear under Pending as soon as they sign up in the apps.'}
+        </EmptyState>
       ) : (
         <Table highlightOnHover verticalSpacing="xs">
           <Table.Thead>
             <Table.Tr>
-              <Table.Th>Name</Table.Th>
+              <Table.Th>Business / name</Table.Th>
               <Table.Th>Role</Table.Th>
               <Table.Th>Contact</Table.Th>
               <Table.Th>Status</Table.Th>
@@ -105,8 +123,17 @@ export function UsersPage() {
           </Table.Thead>
           <Table.Tbody>
             {users.map((u) => (
-              <Table.Tr key={u.id} onClick={() => setOpenId(u.id)} style={{ cursor: 'pointer' }}>
-                <Table.Td>{u.name}</Table.Td>
+              <Table.Tr key={u.id} {...rowLink(() => setOpenId(u.id))}>
+                <Table.Td>
+                  <Text size="sm" fw={600}>
+                    {u.businessName ?? u.name}
+                  </Text>
+                  {u.businessName && (
+                    <Text size="xs" c="dimmed">
+                      {u.name}
+                    </Text>
+                  )}
+                </Table.Td>
                 <Table.Td>{humanize(u.role)}</Table.Td>
                 <Table.Td>{u.phone ?? u.email}</Table.Td>
                 <Table.Td>

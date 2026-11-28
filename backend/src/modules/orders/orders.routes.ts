@@ -5,6 +5,7 @@ import { settingsPatch, type SettingsService } from '../settings/settings.servic
 import type { CartService } from './cart.service.js';
 import {
   cartQuery,
+  forwardBody,
   idParams,
   listOrdersQuery,
   optionalReasonBody,
@@ -63,9 +64,8 @@ export const wholesalerOrderRoutes: FastifyPluginAsync<Deps> = async (app, { ord
   app.get('/:id', async (req) => orders.get('wholesaler', me(req), id(req)));
   app.post('/:id/accept', async (req) => orders.transition('wholesaler', me(req), id(req), 'accept', null, req.ip));
   app.post('/:id/pack', async (req) => orders.transition('wholesaler', me(req), id(req), 'pack', null, req.ip));
-  app.post('/:id/reject', async (req) =>
-    orders.transition('wholesaler', me(req), id(req), 'reject', parse(reasonBody, req.body).reason, req.ip),
-  );
+  /** Can't fulfil it: the order goes back to Partpoint, which forwards it to another wholesaler. */
+  app.post('/:id/reject', async (req) => orders.handBack(me(req), id(req), parse(reasonBody, req.body).reason));
 };
 
 /** Mounted at /v1/admin. All orders, and platform settings. */
@@ -74,6 +74,10 @@ export const adminOrderRoutes: FastifyPluginAsync<Deps> = async (app, { orders, 
 
   app.get('/orders', async (req) => orders.list('admin', me(req), parse(listOrdersQuery, req.query)));
   app.get('/orders/:id', async (req) => orders.get('admin', me(req), id(req)));
+  app.get('/orders/:id/suppliers', async (req) => orders.supplierOptions(id(req)));
+  app.post('/orders/:id/forward', async (req) =>
+    orders.forward(me(req), id(req), parse(forwardBody, req.body), req.ip),
+  );
   app.post('/orders/:id/cancel', async (req) =>
     orders.transition('admin', me(req), id(req), 'cancelByAdmin', parse(reasonBody, req.body).reason, req.ip),
   );

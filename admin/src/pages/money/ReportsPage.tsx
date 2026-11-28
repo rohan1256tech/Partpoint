@@ -42,7 +42,7 @@ export function ReportsPage() {
           <div>
             <Text fw={600}>Orders (CSV)</Text>
             <Text size="sm" c="dimmed">
-              Every order placed in the period: retailer, wholesaler, amounts, commission, status and delivery date.
+              Every order placed in the period: retailer, wholesaler, amounts, Margin, status and delivery date.
             </Text>
           </div>
           <DatePickerInput

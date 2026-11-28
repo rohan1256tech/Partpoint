@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
 import { api, errorMessage } from '../../api/client';
 import type { PlatformSettings } from '../../api/types';
-import { PercentInput, RupeeInput } from '../../components/MoneyInput';
+import { RupeeInput } from '../../components/MoneyInput';
 import { rupees } from '../../lib/format';
 import { useAction } from '../../lib/mutations';
 
@@ -31,20 +31,14 @@ function SettingsForm({ saved }: { saved: PlatformSettings }) {
     <Stack maw={560}>
       <Title order={2}>Settings</Title>
       <Text size="sm" c="dimmed">
-        Changes apply to orders placed from now on. Existing orders keep their amounts.
+        Changes apply to orders placed from now on. Existing orders keep their amounts. Sakshay Connect's margin is the difference between the retailer
+        price and the wholesaler's supply price, set per product.
       </Text>
       <Paper withBorder p="md" radius="md">
         <Stack>
-          <PercentInput
-            label="Platform commission"
-            description="Taken from the goods value of each delivered order. A wholesaler can have their own rate."
-            max={50}
-            bps={form.commissionBps}
-            onBps={(b) => setForm({ ...form, commissionBps: b ?? 0 })}
-          />
           <RupeeInput
-            label="Delivery fee per wholesaler order"
-            description="Charged to the retailer; one fee for each wholesaler in the cart."
+            label="Delivery fee per order"
+            description="Charged to the retailer once per order, even when you split it across wholesalers."
             max={1000}
             paise={form.deliveryFeePaise}
             onPaise={(p) => setForm({ ...form, deliveryFeePaise: p ?? 0 })}
@@ -57,8 +51,8 @@ function SettingsForm({ saved }: { saved: PlatformSettings }) {
             onPaise={(p) => setForm({ ...form, deliveryEarningPaise: p ?? 0 })}
           />
           <RupeeInput
-            label="Minimum order per wholesaler"
-            description="0 = no minimum."
+            label="Minimum order value"
+            description="Smallest cart a retailer can check out. 0 = no minimum."
             max={100000}
             paise={form.minOrderPaise}
             onPaise={(p) => setForm({ ...form, minOrderPaise: p ?? 0 })}

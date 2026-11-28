@@ -208,3 +208,37 @@ export async function resetDb(db: Database): Promise<void> {
   const list = rows.map((r) => `"public"."${r.tablename}"`).join(', ');
   await db.execute(sql.raw(`TRUNCATE ${list} RESTART IDENTITY CASCADE`));
 }
+
+type Http = ReturnType<typeof api>;
+
+/**
+ * Creates and publishes a catalog product as the admin. Returns its id and variant ids, in the
+ * order the variants were given.
+ */
+export async function catalogProduct(
+  http: Http,
+  adminToken: string,
+  body: Record<string, unknown> & { variants: Record<string, unknown>[] },
+): Promise<{ productId: string; variantIds: string[]; variantId: string }> {
+  const res = await http.post('/v1/admin/products', adminToken, body);
+  if (res.statusCode !== 201) throw new Error(`catalogProduct: ${res.statusCode} ${res.body}`);
+  const p = res.json();
+  const published = await http.post(`/v1/admin/products/${p.id}/publish`, adminToken);
+  if (published.statusCode !== 200) throw new Error(`publish: ${published.statusCode} ${published.body}`);
+  const byName = new Map<string, string>(p.variants.map((v: { name: string; id: string }) => [v.name, v.id]));
+  const variantIds = body.variants.map((v) => byName.get(v.name as string) as string);
+  return { productId: p.id, variantIds, variantId: variantIds[0] as string };
+}
+
+/** A wholesaler offers stock of a variant at a supply price. */
+export async function supply(http: Http, wholesalerToken: string, variantId: string, supplyPricePaise: number, stockQty: number) {
+  const res = await http.put(`/v1/wholesaler/catalog/variants/${variantId}/offer`, wholesalerToken, { supplyPricePaise, stockQty });
+  if (res.statusCode !== 200) throw new Error(`supply: ${res.statusCode} ${res.body}`);
+}
+
+/** The admin forwards a whole order to one wholesaler. */
+export async function forward(http: Http, adminToken: string, orderId: string, wholesalerId: string) {
+  const res = await http.post(`/v1/admin/orders/${orderId}/forward`, adminToken, { wholesalerId });
+  if (res.statusCode !== 200) throw new Error(`forward: ${res.statusCode} ${res.body}`);
+  return res.json();
+}

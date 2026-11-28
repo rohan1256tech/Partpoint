@@ -73,7 +73,7 @@ export function newTotpSecret(): Buffer {
   return randomBytes(20); // 160 bits, as RFC 4226 recommends
 }
 
-export function otpauthUri(secret: Buffer, account: string, issuer = 'Partpoint Admin'): string {
+export function otpauthUri(secret: Buffer, account: string, issuer = 'Sakshay Connect Admin'): string {
   const label = encodeURIComponent(`${issuer}:${account}`);
   const params = new URLSearchParams({ secret: base32Encode(secret), issuer, algorithm: 'SHA1', digits: '6', period: '30' });
   return `otpauth://totp/${label}?${params.toString()}`;

@@ -1,7 +1,7 @@
-import { and, eq, inArray } from 'drizzle-orm';
+import { and, eq, inArray, isNull, ne } from 'drizzle-orm';
 import type { FastifyBaseLogger } from 'fastify';
 import type { Database } from '../../db/index.js';
-import { orders, pushTokens } from '../../db/schema.js';
+import { deliveryProfiles, orders, pushTokens, users, wholesalerProfiles } from '../../db/schema.js';
 import type { PushMessage, PushSender } from '../../lib/push.js';
 
 type OrderStatus = (typeof orders.$inferSelect)['status'];
@@ -11,8 +11,9 @@ type ClientApp = (typeof pushTokens.$inferSelect)['app'];
 const ORDER_PUSH: Partial<
   Record<OrderStatus, { to: ('retailer' | 'wholesaler' | 'delivery')[]; title: string; body: (n: string) => string }>
 > = {
-  placed: { to: ['wholesaler'], title: 'New order', body: (n) => `${n} is waiting for you to accept it` },
-  accepted: { to: ['retailer'], title: 'Order accepted', body: (n) => `${n} is being prepared` },
+  // 'placed' goes to the admin panel's queue, not to a phone.
+  forwarded: { to: ['wholesaler'], title: 'New order', body: (n) => `${n} is waiting for you to accept it` },
+  accepted: { to: ['retailer'], title: 'Order confirmed', body: (n) => `${n} is being prepared` },
   packed: { to: ['retailer'], title: 'Order packed', body: (n) => `${n} is packed and awaiting pickup` },
   assigned: { to: ['delivery'], title: 'New delivery', body: (n) => `${n} is assigned to you` },
   picked_up: { to: ['retailer'], title: 'Order picked up', body: (n) => `${n} is on its way. Keep your delivery code ready` },
@@ -81,6 +82,40 @@ export class NotificationService {
             data: { type: 'order', orderId, status: 'reassigned' },
           });
         }
+      })(),
+    );
+  }
+
+  /**
+   * Fire-and-forget: offers a packed order to every available rider ("Order ready for pickup").
+   * The first to take it in the app gets it. [except] = a rider who just gave it back.
+   */
+  offerJob(orderId: string, except?: string): void {
+    this.track(
+      (async () => {
+        const [o] = await this.db
+          .select({ orderNumber: orders.orderNumber, city: wholesalerProfiles.city })
+          .from(orders)
+          .innerJoin(wholesalerProfiles, eq(wholesalerProfiles.userId, orders.wholesalerId))
+          .where(eq(orders.id, orderId));
+        if (!o) return;
+        const riders = await this.db
+          .select({ id: users.id })
+          .from(users)
+          .innerJoin(deliveryProfiles, eq(deliveryProfiles.userId, users.id))
+          .where(
+            and(
+              eq(users.role, 'delivery'),
+              eq(users.status, 'approved'),
+              isNull(users.deletedAt),
+              eq(deliveryProfiles.isAvailable, true),
+              except ? ne(users.id, except) : undefined,
+            ),
+          );
+        await this.deliver(
+          riders.map((r) => r.id),
+          { title: 'Order ready for pickup', body: `${o.orderNumber}: pick up in ${o.city}. Tap to take it.`, data: { type: 'job', orderId } },
+        );
       })(),
     );
   }

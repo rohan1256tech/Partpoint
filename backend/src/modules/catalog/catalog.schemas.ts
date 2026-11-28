@@ -71,7 +71,7 @@ export const uploadRequest = z.object({
   sizeBytes: z.number().int().min(1).max(1024 * 1024),
 });
 
-// ---- products (wholesaler)
+// ---- products (admin catalog)
 
 export const slabInput = z.object({ minQty: z.number().int().min(2).max(1_000_000), pricePaise: paise });
 
@@ -80,7 +80,6 @@ export const variantInput = z.object({
   sku: text(60).optional(),
   mrpPaise: paise,
   pricePaise: paise,
-  stockQty: z.number().int().min(0).max(10_000_000).default(0),
   minOrderQty: qty.default(1),
   slabs: z.array(slabInput).max(5).default([]),
 });
@@ -92,7 +91,6 @@ export const variantUpdate = z
     sku: text(60).nullable(),
     mrpPaise: paise,
     pricePaise: paise,
-    stockQty: z.number().int().min(0).max(10_000_000),
     minOrderQty: qty,
     isActive: z.boolean(),
     slabs: z.array(slabInput).max(5),
@@ -139,16 +137,36 @@ export const browseQuery = z.object({
   q: z.string().trim().min(2).max(80).optional(),
   categoryId: z.uuid().optional(),
   brandId: z.uuid().optional(),
-  wholesalerId: z.uuid().optional(),
   ...pageQuery,
 });
 
-export const ownProductsQuery = z.object({
+export const adminProductsQuery = z.object({
   status: z.enum(['draft', 'active', 'hidden', 'blocked']).optional(),
   q: z.string().trim().min(2).max(80).optional(),
+  categoryId: z.uuid().optional(),
+  /** Products this wholesaler supplies. */
+  wholesalerId: z.uuid().optional(),
+  /** out = nothing can be ordered right now. */
+  stock: z.enum(['out']).optional(),
   ...pageQuery,
 });
 
-export const adminProductsQuery = ownProductsQuery.extend({ wholesalerId: z.uuid().optional() });
+export const supplierCatalogQuery = z.object({
+  q: z.string().trim().min(2).max(80).optional(),
+  categoryId: z.uuid().optional(),
+  /** Only products the wholesaler already supplies. */
+  mine: z
+    .enum(['true', 'false'])
+    .transform((v) => v === 'true')
+    .optional(),
+  ...pageQuery,
+});
+
+export const offerBody = z.object({
+  supplyPricePaise: paise,
+  stockQty: z.number().int().min(0).max(10_000_000),
+  isActive: z.boolean().default(true),
+});
 
 export const reasonBody = z.object({ reason: z.string().trim().min(1).max(500) });
+export const optionalReasonBody = z.object({ reason: z.string().trim().min(1).max(500).optional() });

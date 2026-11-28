@@ -1,8 +1,8 @@
-# Partpoint
+# Sakshay Connect (code name Partpoint)
 
-**A B2B spare-parts e-commerce platform connecting wholesalers, retailers, and delivery partners. An admin manages the whole network.**
+**A B2B e-commerce platform for mobile spare parts and accessories. Retailers buy from Sakshay Connect; Sakshay Connect sources every order from its network of wholesalers. An admin runs the whole network.**
 
-Retailers browse and order parts from wholesalers and pay online. Delivery partners pick up from the wholesaler and deliver to the retailer. The admin approves users, manages the catalog, assigns deliveries, and tracks commissions and reports.
+Retailers (repair shops and mobile stores) browse Partpoint's catalog (displays, batteries, charging ports, back panels, cameras, speakers, chargers, cables, earphones, covers, screen guards, power banks) and order from Partpoint; they never see which wholesaler supplies them. Every order goes to the admin first, who chooses the wholesaler(s) that fulfil it by stock, price and area, splitting it across wholesalers when needed. Delivery partners pick up from the wholesaler and deliver to the retailer. The admin also approves users, manages the catalog and prices, assigns deliveries, and tracks Partpoint's margin and reports.
 
 ---
 
@@ -80,29 +80,35 @@ User signs up (phone OTP or email + password) → status PENDING
 
 ### 2. Catalog
 ```
-Wholesaler adds a product (category, brand, variants, bulk price slabs, stock, photos)
-  → Photos are compressed to WebP on the device → uploaded directly to R2 via a pre-signed URL
-  → Product goes live (admin can hide or block it)
+Admin creates a product (category, brand, variants, retailer price, bulk price slabs, photos)
+  → Photos are converted to WebP in the browser → uploaded directly to R2 via a pre-signed URL
+  → Admin publishes it; retailers see one Partpoint listing per product
+Wholesalers add their stock and supply price to each variant (supplier offers) in the Partpoint app
+  → Buyable stock = the sum of active offers from approved wholesalers
 Admin manages categories, brands, banners and coupons
 ```
 
 ### 3. Order lifecycle
 ```
-RETAILER    Browse → Cart (multi-wholesaler) → Coupon → Checkout → Pay (Razorpay)
+RETAILER    Browse → Cart (one Partpoint order) → Coupon → Checkout → Pay (Razorpay)
                 │
-BACKEND     Razorpay webhook verified → stock reserved in a DB transaction
-            → cart split into one sub-order per wholesaler → GST invoice PDF generated
+ADMIN       "Needs wholesaler" queue → sees who stocks each item, supply cost and margin,
+            and a suggestion (cheapest full supplier, same city preferred)
+            → forwards to one wholesaler, or splits by item into parts PP-…-2, -3
+            → stock taken from the chosen offers, supply prices frozen
                 │
-WHOLESALER  Push "New order" → Accept → Packed
+WHOLESALER  Push "New order" → Accept → Packed (GST invoice issued)
+            or "Can't supply" → back to the admin queue (stock restored)
                 │
 ADMIN       Assigns an available delivery partner
                 │
-DELIVERY    Push "New delivery" → Accept → Picked up → Out for delivery
+DELIVERY    Push "Order ready for pickup" to every available rider → first to take it gets it
+            (or the admin assigns one) → Picked up → Out for delivery
             → Delivered (retailer shares the delivery OTP)
                 │
 RETAILER    Live status updates → Rate & review → Reorder
                 │
-BACKEND     Commission computed → wholesaler payable recorded → delivery earnings recorded
+BACKEND     Partpoint margin (price − supply price) recorded → wholesaler payable recorded → delivery earnings recorded
 ```
 
 > **Current build:** online payment is deferred (see [Open Decisions](#open-decisions)). "Checkout → Pay" is
@@ -110,7 +116,7 @@ BACKEND     Commission computed → wholesaler payable recorded → delivery ear
 
 ### 4. Money flow
 ```
-Retailer pays → Platform's Razorpay account → Platform commission retained
+Retailer pays → Platform's Razorpay account → Partpoint keeps its margin (retailer price − supply price)
 → Wholesaler payout (tracked in the admin panel, settled manually in v1)
 → Delivery earnings tracked per delivery
 ```
@@ -224,16 +230,14 @@ The goal is approval on the first submission. Every item below is part of the de
 ### Permissions
 - [ ] **No `READ_SMS`.** OTP auto-fill uses the SMS Retriever / User Consent API.
 - [ ] **No `READ_MEDIA_IMAGES`.** Product photos are chosen through the Android Photo Picker.
-- [ ] Location **only in the Delivery app**: while-in-use permission plus a `location`-type foreground service during an active delivery, with a prominent in-app disclosure before the request.
-- [ ] **No `ACCESS_BACKGROUND_LOCATION`.**
-- [ ] Foreground service declaration and demo video submitted (Delivery app).
+- [x] **No location permission in v1, in either app.** The Delivery app hands the pickup and drop address to Google Maps for directions; Maps uses its own permission. This removes the location disclosure, foreground-service declaration and demo video from the Play review. (Phase 2 live tracking would add a while-in-use permission with a `location` foreground service and a prominent disclosure; never `ACCESS_BACKGROUND_LOCATION`.)
 - [ ] Notification permission requested in context, not at first launch.
 
 ### Play Console declarations
 - [ ] **App access:** working demo accounts for **every role**, using test numbers with a fixed OTP, pre-approved.
 - [ ] **Account deletion:** an in-app option plus a public web URL.
 - [ ] **Privacy policy:** hosted on our domain and linked in the app; matches the Data safety form.
-- [ ] **Data safety form:** accurate for each app (location declared only for Delivery).
+- [ ] **Data safety form:** accurate for each app (no location collected in v1).
 - [ ] **User-generated content:** "Report review" in the app and moderation in the admin panel.
 - [ ] Target audience 18+; content rating questionnaire; ads declaration (none); financial features declaration (none in v1).
 - [ ] Store listing uses real screenshots and an accurate description, with no third-party brand names or keyword stuffing.

@@ -5,6 +5,26 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Changed (2026-11-28): Sakshay Connect
+- Renamed to Sakshay Connect (retailer and wholesaler app) and Sakshay Connect Delivery; black and yellow
+  brand, new logo, launcher icons and splash. Order and invoice numbers now start with SC.
+- Packed orders are offered to every available rider; the first to take one gets it (`/v1/delivery/jobs`).
+- Retailer home with delivery location, promo card and quick actions; vertical order tracking timeline.
+
+### Changed (2026-11-28): mobile parts, Partpoint-sourced orders, new look
+- Domain: mobile spare parts and accessories (demo catalog, copy, privacy policy, taglines).
+- Partpoint owns the catalog: the admin creates products and sets retailer prices; wholesalers keep
+  supplier offers (stock and supply price per variant). Migration `0011_admin_catalog` turns existing
+  listings into offers.
+- Every order goes to the admin first (`placed`), who forwards it to one wholesaler or splits it by item
+  (`forwarded`); retailers never see wholesaler names. A wholesaler that cannot supply hands the order
+  back instead of cancelling it. Partpoint's margin replaces the commission.
+- Admin panel: "Needs wholesaler" queue with supplier options and suggestion; catalog editor with photos
+  and every wholesaler's stock and margin.
+- Android: one-list cart and single order for retailers; wholesaler "Stock" screens replace the product
+  editor; new brand theme, logo, launcher icons, home header, product and category artwork.
+- `backend/scripts/flow-check.ts`: end-to-end check of the whole flow against a running API.
+
 ### Added
 - Initial repository setup: README (two-app architecture, flows, security, Play compliance, costs), .gitignore, .gitattributes.
 - Backend scaffold: Fastify 5 + TypeScript, Zod-validated config, Drizzle schema for all v1 tables, `/health`.
@@ -132,6 +152,78 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
     and percent, stored as paise and basis points.
   - Account deletions: process web-form requests (complete or reject with note), history of in-app ones.
 - Admin banner list now includes image URLs.
+- Android project (`android/`): Partpoint and Partpoint Delivery apps sharing core modules. Phone OTP sign-in
+  with SMS code autofill and resend timer, new-account signup (retailer, wholesaler with address and GSTIN
+  check, or rider with vehicle), waiting-for-approval screen, sign out, in-app account deletion. Session
+  restored at start; access token in memory, refresh token encrypted with an Android Keystore key, single
+  shared refresh on 401. Backups off, HTTPS-only release builds, R8. Unit tests for phone numbers, refresh
+  and retry. CI: `android.yml` (tests, debug APKs).
+- Fixed: a new admin signing in to the panel saw "Set up two-factor authentication to continue" instead of
+  the 2FA setup screen, because `/v1/me` was behind the 2FA gate. It is now readable before 2FA.
+- Admin panel UI review (screenshots of every page, desktop/phone, light/dark): tables scroll inside
+  themselves on phones instead of widening the page; explained empty states; sidebar counts for accounts
+  awaiting approval and reported reviews; user list shows the shop/business name and has search (name, shop,
+  phone, email); photo placeholders; labelled top-wholesaler and top-product lists; correct plurals; clickable
+  rows reachable by keyboard; a rider accepting a job is titled as such in the order timeline.
+- `pnpm db:seed:demo`: a realistic demo marketplace (categories, brands, 3 wholesalers with 15 products,
+  retailers, riders, 10 orders in every status, reviews, a reported review, coupons) created through the
+  real API; demo accounts sign in with fixed-OTP demo phone numbers (also the Play review accounts).
+- Partpoint app, retailer side: bottom navigation (Home, Categories, Cart with count, Orders, Account). Home
+  with search, banner carousel, category tiles, brand chips and an endless product grid; search with
+  debounce; category/brand/seller lists; product page with photos, variant picker, bulk-price tiers that
+  highlight the tier reached, stock line, seller link, reviews, wishlist and a sticky add/update bar. Cart
+  grouped by seller with steppers, plain-language line problems, minimum-order hints, coupon, totals.
+  Checkout with address choice or inline new address and duplicate-proof ordering (idempotency key).
+  Orders: in-progress and past, status stepper, large delivery code, rider call, cancel while waiting for
+  the seller, GST invoice in the PDF viewer, star ratings after delivery. Account: addresses (add, edit,
+  default, delete), wishlist, sign out, delete account. Pull-to-refresh and retry everywhere.
+- Android: Coil image loading, shared formatting (Indian digit grouping, IST), leaner Gradle memory use.
+- Partpoint app, wholesaler side (Orders, Products, Earnings, Account tabs). Orders by next task (New,
+  To pack, Ready for pickup, On the way, Done) with counts; order view with a plain next-step hint, items
+  to pack, accept, reject with a reason, mark packed, rider pickup details and the GST invoice. Products:
+  search, status filters (live, draft, hidden, blocked with reason), stock warnings; editor with category
+  and brand pickers, part number, HSN, GST rate, description, options with MRP, price, stock, minimum
+  order and up to 5 bulk prices, on/off per option, draft/publish/hide, and photos from the Photo Picker
+  converted to WebP (1600 px, 1 MB, metadata stripped) and uploaded straight to storage. Pricing problems
+  are shown in plain words before saving, matching the server rules. Earnings: balance owed, breakdown,
+  this month's orders and earnings, top sellers, payouts received.
+- Partpoint Delivery app (Jobs, Earnings, Account tabs): online/offline switch; job list with new offers
+  first; guided job screen (accept or decline with reason, go to pickup with an item checklist, picked up,
+  start delivery, enter the retailer's 4-digit code with screenshot protection); pickup and drop cards with
+  Google Maps two-wheeler directions and call buttons; earnings (today, 7 days, month, all time, unpaid)
+  and recent deliveries. No location permission: directions are handed to Maps (README Play checklist
+  updated). Shared loading helper moved to core:ui.
+- Push notifications in both apps (Firebase Cloud Messaging). Firebase is initialised from
+  gradle.properties values (no google-services file; empty = push off). Channels "Orders and deliveries"
+  and "Account and announcements"; the backend now sets the channel per message. The device token is
+  registered after sign-in and removed at sign-out/account deletion. Tapping a notification opens that
+  order or job; open lists and detail screens refresh when a push arrives. Notification permission
+  (Android 13+) is asked in context on each app's main work screen, once, with a reason.
+- Admin announcements: push a short title and message to approved retailers, wholesalers, delivery
+  partners or everyone, with a phone-style preview and a confirmation (pushes can't be recalled). History
+  with accounts and devices reached; kept in the audit log. Max 10 per hour.
+- Partpoint app: email sign-in ("Sign in with email instead"), email signup (email and password with the
+  same business details, verified by an emailed 6-digit code), and forgot password (code by email, new
+  password, other sessions signed out). An unverified email at sign-in sends a fresh code and opens the
+  code screen. The Delivery app stays phone-only, since riders must be reachable by phone.
+- Public privacy policy at `/privacy` (DPDP Act 2023 notice, Play policy URL): what is collected and why, who
+  sees it, retention (GST records ~8 years), protection, rights, grievance officer. Business name, address,
+  grievance officer and privacy email come from new settings (LEGAL_NAME, LEGAL_ADDRESS, GRIEVANCE_OFFICER,
+  PRIVACY_EMAIL), required in production; missing ones are visibly flagged in development. Linked from the
+  signup consent (both apps) and every Account screen. Deletion page now says "Account → Delete account".
+- Android release builds: optional upload-key signing from CI secrets (unsigned without a key); R8 builds
+  verified (about 2.2–2.6 MB, all serializers kept). CI `release` job on main builds both signed AABs, keeps
+  them with the R8 mapping files, and can publish to Play internal testing (switched off by variables until
+  the Play account exists).
+- Fixed (found testing on a real phone): placing an order showed a technical error although the order
+  was created, because the app expected a full order summary in the reply; and the seller's order view
+  failed to load because sellers (correctly) receive only the delivery area, not the retailer's contact
+  and street. Both are covered by tests decoding the real replies. Privacy policy wording corrected to say
+  sellers see the delivery area. Savings green is lighter in dark mode for contrast.
+- Fixed (phone testing): the rider's "Confirm delivery" button was hidden behind the keyboard while typing
+  the code; forms now stay clear of the keyboard (checkout, product editor, sign-in screens) and the
+  keyboard's Done key confirms the delivery. After delivery the rider sees only the area (no stray comma,
+  no Navigate). Status labels are readable in dark mode.
 
 ### Fixed
 - Blank values in `.env` (e.g. `DEMO_OTP=`) stopped the API from starting; they now mean "not set".

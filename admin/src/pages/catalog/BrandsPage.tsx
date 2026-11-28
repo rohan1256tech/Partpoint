@@ -1,4 +1,4 @@
-import { Alert, Badge, Button, Group, Image, Loader, Modal, Stack, Switch, Table, Text, TextInput, Title } from '@mantine/core';
+import { Alert, Badge, Button, Group, Loader, Modal, Stack, Switch, Table, Text, TextInput, Title } from '@mantine/core';
 import { IconPlus } from '@tabler/icons-react';
 import { useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
@@ -6,6 +6,10 @@ import { api, errorMessage } from '../../api/client';
 import type { Brand } from '../../api/types';
 import { ImageUpload } from '../../components/ImageUpload';
 import { useAction } from '../../lib/mutations';
+import { Thumb } from '../../components/Thumb';
+import { rowLink } from '../../lib/rowLink';
+import { IconTag } from '@tabler/icons-react';
+import { EmptyState } from '../../components/EmptyState';
 
 type Draft = { id?: string; name: string; slug: string; isActive: boolean; logoKey?: string; logoUrl: string | null };
 
@@ -46,7 +50,7 @@ export function BrandsPage() {
       {isLoading ? (
         <Loader />
       ) : brands.length === 0 ? (
-        <Text c="dimmed">No brands found.</Text>
+        <EmptyState icon={IconTag} title="No brands found">Brands help retailers filter parts and accessories by maker. Add the ones your wholesalers stock.</EmptyState>
       ) : (
         <Table highlightOnHover>
           <Table.Thead>
@@ -58,10 +62,10 @@ export function BrandsPage() {
           </Table.Thead>
           <Table.Tbody>
             {brands.map((b) => (
-              <Table.Tr key={b.id} style={{ cursor: 'pointer' }} onClick={() => setDraft({ ...b, logoKey: undefined })}>
+              <Table.Tr key={b.id} {...rowLink(() => setDraft({ ...b, logoKey: undefined }))}>
                 <Table.Td>
                   <Group gap="sm">
-                    {b.logoUrl ? <Image src={b.logoUrl} w={28} h={28} radius="sm" alt="" /> : <div style={{ width: 28 }} />}
+                    <Thumb src={b.logoUrl} size={28} />
                     <Text size="sm" fw={600}>
                       {b.name}
                     </Text>

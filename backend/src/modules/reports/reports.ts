@@ -117,7 +117,7 @@ export class ReportsService {
       shop_name: string;
       city: string;
       pincode: string;
-      business_name: string;
+      business_name: string | null;
       subtotal_paise: string;
       discount_paise: string;
       delivery_fee_paise: string;
@@ -132,7 +132,7 @@ export class ReportsService {
              o.commission_paise, o.delivered_at, o.cancel_reason
       FROM orders o
       JOIN retailer_profiles rp ON rp.user_id = o.retailer_id
-      JOIN wholesaler_profiles wp ON wp.user_id = o.wholesaler_id
+      LEFT JOIN wholesaler_profiles wp ON wp.user_id = o.wholesaler_id
       WHERE o.created_at >= ${start} AND o.created_at < ${end}
       ORDER BY o.created_at, o.order_number
       LIMIT ${MAX_CSV_ROWS + 1}`);
@@ -142,7 +142,7 @@ export class ReportsService {
     return toCsv(
       [
         'Order number', 'Placed at (IST)', 'Status', 'Retailer', 'City', 'PIN code', 'Wholesaler',
-        'Subtotal (₹)', 'Discount (₹)', 'Delivery fee (₹)', 'Total (₹)', 'Commission (₹)', 'Delivered at (IST)', 'Cancel reason',
+        'Subtotal (₹)', 'Discount (₹)', 'Delivery fee (₹)', 'Total (₹)', 'Margin (₹)', 'Delivered at (IST)', 'Cancel reason',
       ],
       rows.map((r) => [
         r.order_number,
@@ -151,7 +151,7 @@ export class ReportsService {
         r.shop_name,
         r.city,
         r.pincode,
-        r.business_name,
+        r.business_name ?? '',
         rupees(n(r.subtotal_paise)),
         rupees(n(r.discount_paise)),
         rupees(n(r.delivery_fee_paise)),

@@ -1,6 +1,8 @@
 import { Alert, Badge, Button, Card, Group, Loader, Rating, SegmentedControl, Stack, Text, Title } from '@mantine/core';
 import { useInfiniteQuery } from '@tanstack/react-query';
+import { IconStar } from '@tabler/icons-react';
 import { useState } from 'react';
+import { EmptyState } from '../../components/EmptyState';
 import { api, errorMessage } from '../../api/client';
 import type { AdminReview, Page } from '../../api/types';
 import { dateTime } from '../../lib/format';
@@ -48,7 +50,11 @@ export function ReviewsPage() {
       {list.isLoading ? (
         <Loader />
       ) : reviews.length === 0 ? (
-        <Text c="dimmed">{filter === 'reported' ? 'Nothing to moderate.' : 'No reviews here.'}</Text>
+        <EmptyState icon={IconStar} title={filter === 'reported' ? 'Nothing to moderate' : 'No reviews here'}>
+          {filter === 'reported'
+            ? 'When someone reports a review in the app, it appears here for you to keep or hide.'
+            : 'Retailers can review a product after it is delivered.'}
+        </EmptyState>
       ) : (
         reviews.map((r) => (
           <Card key={r.id} withBorder padding="md">

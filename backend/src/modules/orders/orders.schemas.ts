@@ -15,7 +15,7 @@ export const placeOrderBody = z.object({
 
 export const listOrdersQuery = z.object({
   status: z
-    .enum(['placed', 'accepted', 'packed', 'assigned', 'picked_up', 'out_for_delivery', 'delivered', 'cancelled'])
+    .enum(['placed', 'forwarded', 'accepted', 'packed', 'assigned', 'picked_up', 'out_for_delivery', 'delivered', 'cancelled'])
     .optional(),
   /** active = assigned/picked up/out for delivery; history = delivered/cancelled. */
   scope: z.enum(['active', 'history']).optional(),
@@ -27,3 +27,11 @@ export const listOrdersQuery = z.object({
 
 export const reasonBody = z.object({ reason: z.string().trim().min(1).max(500) });
 export const optionalReasonBody = z.object({ reason: z.string().trim().min(1).max(500).optional() });
+
+/** Either one wholesaler for the whole order, or a wholesaler per item (items not listed use wholesalerId). */
+export const forwardBody = z
+  .object({
+    wholesalerId: z.uuid().optional(),
+    assignments: z.array(z.object({ itemId: z.uuid(), wholesalerId: z.uuid() })).max(100).optional(),
+  })
+  .refine((b) => b.wholesalerId || b.assignments?.length, 'Choose a wholesaler');

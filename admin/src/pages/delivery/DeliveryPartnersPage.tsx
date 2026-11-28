@@ -1,6 +1,8 @@
 import { Alert, Badge, Loader, SegmentedControl, Stack, Table, Text, Title } from '@mantine/core';
 import { useQuery } from '@tanstack/react-query';
+import { IconTruckDelivery } from '@tabler/icons-react';
 import { useState } from 'react';
+import { EmptyState } from '../../components/EmptyState';
 import { api, errorMessage } from '../../api/client';
 import type { DeliveryPartner } from '../../api/types';
 import { count } from '../../lib/format';
@@ -29,13 +31,17 @@ export function DeliveryPartnersPage() {
         ]}
       />
       <Text size="sm" c="dimmed">
-        Riders switch availability in the Partpoint Delivery app. New riders appear here once approved under Users.
+        Riders switch availability in the Sakshay Connect Delivery app. New riders appear here once approved under Users.
       </Text>
       {error && <Alert color="red">{errorMessage(error)}</Alert>}
       {isLoading ? (
         <Loader />
       ) : partners.length === 0 ? (
-        <Text c="dimmed">{filter === 'available' ? 'No riders are available right now.' : 'No approved riders yet.'}</Text>
+        <EmptyState icon={IconTruckDelivery} title={filter === 'available' ? 'No riders available right now' : 'No approved riders yet'}>
+          {filter === 'available'
+            ? 'Riders appear here when they switch to available in the Sakshay Connect Delivery app.'
+            : 'Riders sign up in the Sakshay Connect Delivery app; approve them under Users.'}
+        </EmptyState>
       ) : (
         <Table>
           <Table.Thead>

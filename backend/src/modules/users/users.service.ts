@@ -1,7 +1,8 @@
-import { and, desc, eq, isNull, lt, or, type SQL } from 'drizzle-orm';
+import { and, desc, eq, ilike, isNull, lt, or, sql, type SQL } from 'drizzle-orm';
 import type { Database } from '../../db/index.js';
 import { deliveryProfiles, retailerProfiles, users, wholesalerProfiles } from '../../db/schema.js';
 import { audit } from '../../lib/audit.js';
+import { escapeLike } from '../../lib/like.js';
 import { decodeCursor, encodeCursor } from '../../lib/cursor.js';
 import { conflict, notFound } from '../../lib/errors.js';
 import { toPublicUser, type PublicUser } from '../auth/auth.service.js';
@@ -19,9 +20,17 @@ export interface UserWithProfile extends PublicUser {
 export interface ListUsersQuery {
   status?: Status;
   role?: Exclude<Role, 'admin'>;
+  /** Matches name, phone, email, shop or business name. */
+  q?: string;
   limit: number;
   cursor?: string;
 }
+
+/** A list row: the account plus the business it represents, so the admin recognises it. */
+export interface UserListItem extends PublicUser {
+  businessName: string | null;
+}
+
 
 export class UsersService {
   constructor(
@@ -64,17 +73,32 @@ export class UsersService {
   }
 
   /** Newest first, keyset-paginated. Admin accounts are never listed. */
-  async list(q: ListUsersQuery): Promise<{ items: PublicUser[]; nextCursor: string | null }> {
+  async list(q: ListUsersQuery): Promise<{ items: UserListItem[]; nextCursor: string | null }> {
     const filters: (SQL | undefined)[] = [isNull(users.deletedAt)];
     if (q.status) filters.push(eq(users.status, q.status));
     filters.push(q.role ? eq(users.role, q.role) : or(...(['retailer', 'wholesaler', 'delivery'] as const).map((r) => eq(users.role, r))));
+    const business = sql<string | null>`coalesce(${retailerProfiles.shopName}, ${wholesalerProfiles.businessName})`;
+    if (q.q) {
+      const term = `%${escapeLike(q.q)}%`;
+      filters.push(
+        or(
+          ilike(users.name, term),
+          ilike(users.email, term),
+          ilike(users.phone, term),
+          ilike(retailerProfiles.shopName, term),
+          ilike(wholesalerProfiles.businessName, term),
+        ),
+      );
+    }
     if (q.cursor) {
       const { createdAt, id } = decodeCursor(q.cursor);
       filters.push(or(lt(users.createdAt, createdAt), and(eq(users.createdAt, createdAt), lt(users.id, id))));
     }
     const rows = await this.db
-      .select()
+      .select({ user: users, businessName: business })
       .from(users)
+      .leftJoin(retailerProfiles, eq(retailerProfiles.userId, users.id))
+      .leftJoin(wholesalerProfiles, eq(wholesalerProfiles.userId, users.id))
       .where(and(...filters))
       .orderBy(desc(users.createdAt), desc(users.id))
       .limit(q.limit + 1);
@@ -82,8 +106,8 @@ export class UsersService {
     const page = rows.slice(0, q.limit);
     const last = page.at(-1);
     return {
-      items: page.map(toPublicUser),
-      nextCursor: rows.length > q.limit && last ? encodeCursor(last.createdAt, last.id) : null,
+      items: page.map((r) => ({ ...toPublicUser(r.user), businessName: r.businessName })),
+      nextCursor: rows.length > q.limit && last ? encodeCursor(last.user.createdAt, last.user.id) : null,
     };
   }
 
@@ -133,7 +157,7 @@ export class UsersService {
     if (next === 'approved') {
       this.notifications.notifyUsers([userId], {
         title: 'Account approved',
-        body: 'Your Partpoint account is approved. You can start using the app now.',
+        body: 'Your Sakshay Connect account is approved. You can start using the app now.',
         data: { type: 'account', status: 'approved' },
       });
     }

@@ -1,0 +1,136 @@
+name: android
+
+on:
+  push:
+    paths: ['android/**', '.github/workflows/android.yml']
+  pull_request:
+    paths: ['android/**', '.github/workflows/android.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: android-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    working-directory: android
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # versionCode = commit count
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 17
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          validate-wrappers: true
+      - name: Install SDK platform 37.1
+        run: yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-37.1" > /dev/null
+      - name: More memory for Gradle on CI
+        # gradle.properties is sized for an 8 GB laptop; GitHub runners have 16 GB. User-level settings win.
+        run: mkdir -p ~/.gradle && echo "org.gradle.jvmargs=-Xmx6g -XX:MaxMetaspaceSize=1g -Dfile.encoding=UTF-8" >> ~/.gradle/gradle.properties
+      - name: Unit tests
+        run: ./gradlew testDebugUnitTest --console=plain 2>&1 | tee -a "$RUNNER_TEMP/gradle.log"; exit ${PIPESTATUS[0]}
+      - name: Build debug APKs
+        run: ./gradlew :app-partpoint:assembleDebug :app-delivery:assembleDebug --console=plain 2>&1 | tee -a "$RUNNER_TEMP/gradle.log"; exit ${PIPESTATUS[0]}
+      - name: Report the Gradle error
+        if: failure()
+        # Turn Gradle's "What went wrong" and compiler errors into annotations, readable without the full log.
+        run: |
+          grep -E "^e: |What went wrong|^> " "$RUNNER_TEMP/gradle.log" | head -n 20 | while IFS= read -r line; do echo "::error::$line"; done
+          grep -E "FAILED$|tests completed" "$RUNNER_TEMP/gradle.log" | head -n 10 | while IFS= read -r line; do echo "::error::$line"; done
+      - name: Keep the APKs
+        if: github.event_name == 'push'
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-debug-apks-${{ github.sha }}
+          path: android/app-*/build/outputs/apk/debug/*.apk
+          retention-days: 14
+
+  # Signed release bundles (AAB) on main. Needs these GitHub settings (Settings → Secrets and variables → Actions):
+  #   secrets:   ANDROID_KEYSTORE_BASE64, ANDROID_KEYSTORE_PASSWORD, ANDROID_KEY_ALIAS, ANDROID_KEY_PASSWORD
+  #              PLAY_SERVICE_ACCOUNT_JSON (only for the Play upload step)
+  #   variables: ANDROID_API_BASE_URL (https://api.<domain>/), ANDROID_APP_ID_PREFIX (e.g. com.clientname)
+  #              FIREBASE_PROJECT_ID, FIREBASE_API_KEY, FIREBASE_SENDER_ID,
+  #              FIREBASE_APP_ID_PARTPOINT, FIREBASE_APP_ID_DELIVERY
+  #              ANDROID_RELEASE_ENABLED=true to run this job, PLAY_UPLOAD_ENABLED=true to upload to internal testing
+  release:
+    needs: check
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push' && vars.ANDROID_RELEASE_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # versionCode = commit count
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 17
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Install SDK platform 37.1
+        run: yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-37.1" > /dev/null
+      - name: More memory for Gradle on CI
+        # gradle.properties is sized for an 8 GB laptop; GitHub runners have 16 GB. User-level settings win.
+        run: mkdir -p ~/.gradle && echo "org.gradle.jvmargs=-Xmx6g -XX:MaxMetaspaceSize=1g -Dfile.encoding=UTF-8" >> ~/.gradle/gradle.properties
+      - name: Upload key from secrets
+        env:
+          KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+        run: |
+          echo "$KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/upload.jks"
+          echo "PARTPOINT_KEYSTORE=$RUNNER_TEMP/upload.jks" >> "$GITHUB_ENV"
+      - name: Build signed bundles
+        env:
+          PARTPOINT_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          PARTPOINT_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          PARTPOINT_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: >
+          ./gradlew :app-partpoint:bundleRelease :app-delivery:bundleRelease
+          -Ppartpoint.apiBaseUrl=${{ vars.ANDROID_API_BASE_URL }}
+          -Ppartpoint.appIdPrefix=${{ vars.ANDROID_APP_ID_PREFIX }}
+          -Ppartpoint.firebase.projectId=${{ vars.FIREBASE_PROJECT_ID }}
+          -Ppartpoint.firebase.apiKey=${{ vars.FIREBASE_API_KEY }}
+          -Ppartpoint.firebase.senderId=${{ vars.FIREBASE_SENDER_ID }}
+          -Ppartpoint.firebase.appId.partpoint=${{ vars.FIREBASE_APP_ID_PARTPOINT }}
+          -Ppartpoint.firebase.appId.delivery=${{ vars.FIREBASE_APP_ID_DELIVERY }}
+      - name: Keep the bundles and R8 mapping files
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-release-${{ github.sha }}
+          path: |
+            android/app-*/build/outputs/bundle/release/*.aab
+            android/app-*/build/outputs/mapping/release/mapping.txt
+          retention-days: 90
+      - name: Upload to Play internal testing (Partpoint)
+        if: vars.PLAY_UPLOAD_ENABLED == 'true'
+        uses: r0adkll/upload-google-play@v1.1.3
+        with:
+          serviceAccountJsonPlainText: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+          packageName: ${{ vars.ANDROID_APP_ID_PREFIX }}.app
+          releaseFiles: android/app-partpoint/build/outputs/bundle/release/app-partpoint-release.aab
+          mappingFile: android/app-partpoint/build/outputs/mapping/release/mapping.txt
+          track: internal
+          status: completed
+      - name: Upload to Play internal testing (Delivery)
+        if: vars.PLAY_UPLOAD_ENABLED == 'true'
+        uses: r0adkll/upload-google-play@v1.1.3
+        with:
+          serviceAccountJsonPlainText: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+          packageName: ${{ vars.ANDROID_APP_ID_PREFIX }}.delivery
+          releaseFiles: android/app-delivery/build/outputs/bundle/release/app-delivery-release.aab
+          mappingFile: android/app-delivery/build/outputs/mapping/release/mapping.txt
+          track: internal
+          status: completed
+      - name: Remove the key
+        if: always()
+        run: rm -f "$RUNNER_TEMP/upload.jks"

@@ -335,9 +335,9 @@ export class AuthService {
     }
     if (!code) return;
     const otpCode = code;
-    const subject = purpose === 'verify_email' ? 'Verify your Partpoint email' : 'Reset your Partpoint password';
+    const subject = purpose === 'verify_email' ? 'Verify your Sakshay Connect email' : 'Reset your Sakshay Connect password';
     const body =
-      `Your Partpoint code is ${otpCode}. It expires in 5 minutes.\n\n` +
+      `Your Sakshay Connect code is ${otpCode}. It expires in 5 minutes.\n\n` +
       'If you did not request this, you can ignore this email.';
     await this.deliver(() => this.messaging.mail.send(email, subject, body));
   }

@@ -4,10 +4,10 @@ import { cartItems } from '../../db/schema.js';
 import { badRequest, notFound } from '../../lib/errors.js';
 import type { Storage } from '../../lib/storage.js';
 import { unitPriceFor, type Slab } from '../catalog/pricing.js';
-import { publicProductFilters, publicProductJoins } from '../catalog/visibility.js';
+import { availableStock, publicProductFilters, publicProductJoins } from '../catalog/visibility.js';
 import type { SettingsService } from '../settings/settings.service.js';
 import type { CouponsService } from './coupons.service.js';
-import { priceOrderGroups } from './pricing.js';
+import { orderTotals } from './pricing.js';
 
 export const MAX_CART_LINES = 100;
 export const MAX_LINE_QTY = 100_000;
@@ -20,6 +20,7 @@ export interface VariantLine {
   variantName: string;
   mrpPaise: number;
   pricePaise: number;
+  /** Units buyers can order now, across all suppliers. */
   stockQty: number;
   minOrderQty: number;
   slabs: Slab[];
@@ -27,10 +28,6 @@ export interface VariantLine {
   productName: string;
   hsnCode: string | null;
   gstRateBps: number;
-  wholesalerId: string;
-  businessName: string;
-  city: string;
-  commissionBps: number | null;
   thumbKey: string | null;
   /** Buyer-visible product and active variant. */
   available: boolean;
@@ -53,19 +50,9 @@ export interface CartLine {
   issue: LineIssue | null;
 }
 
-export interface CartGroup {
-  wholesaler: { id: string; businessName: string; city: string };
-  lines: CartLine[];
-  subtotalPaise: number;
-  discountPaise: number;
-  deliveryFeePaise: number;
-  totalPaise: number;
-  /** Below the platform minimum order value for one wholesaler. */
-  belowMinOrder: boolean;
-}
-
+/** Everything is bought from Partpoint: one list, one order. */
 export interface Cart {
-  groups: CartGroup[];
+  lines: CartLine[];
   itemCount: number;
   subtotalPaise: number;
   discountPaise: number;
@@ -74,11 +61,13 @@ export interface Cart {
   coupon: { code: string; discountPaise: number } | null;
   couponError: string | null;
   minOrderPaise: number;
+  /** Below the platform minimum order value. */
+  belowMinOrder: boolean;
   /** True when every line can be ordered as it is. */
   canCheckout: boolean;
 }
 
-/** Loads variants with product, wholesaler and visibility. Unknown ids are simply absent. */
+/** Loads variants with product, availability and visibility. Unknown ids are simply absent. */
 export async function loadVariantLines(db: Executor, variantIds: readonly string[]): Promise<Map<string, VariantLine>> {
   if (variantIds.length === 0) return new Map();
   const ids = sql.join(
@@ -90,31 +79,26 @@ export async function loadVariantLines(db: Executor, variantIds: readonly string
     variant_name: string;
     mrp_paise: string;
     price_paise: string;
-    stock_qty: number;
+    stock_qty: string;
     min_order_qty: number;
     slabs: Slab[];
     product_id: string;
     product_name: string;
     hsn_code: string | null;
     gst_rate_bps: number;
-    wholesaler_id: string;
-    business_name: string;
-    city: string;
-    commission_bps: number | null;
     thumb_key: string | null;
     available: boolean;
   }>(sql`
-    SELECT v.id AS variant_id, v.name AS variant_name, v.mrp_paise, v.price_paise, v.stock_qty, v.min_order_qty,
+    SELECT v.id AS variant_id, v.name AS variant_name, v.mrp_paise, v.price_paise,
+           ${availableStock(sql`v.id`)} AS stock_qty, v.min_order_qty,
            COALESCE((SELECT json_agg(json_build_object('minQty', s.min_qty, 'pricePaise', s.price_paise))
                      FROM price_slabs s WHERE s.variant_id = v.id), '[]'::json) AS slabs,
-           p.id AS product_id, p.name AS product_name, p.hsn_code, p.gst_rate_bps, p.wholesaler_id,
-           wp.business_name, wp.city, wp.commission_bps,
+           p.id AS product_id, p.name AS product_name, p.hsn_code, p.gst_rate_bps,
            (SELECT i.object_key FROM product_images i WHERE i.product_id = p.id
              ORDER BY i.sort_order, i.created_at LIMIT 1) AS thumb_key,
            (v.is_active AND ${sql.join(publicProductFilters(), sql` AND `)}) AS available
     FROM product_variants v
     JOIN products p ON p.id = v.product_id
-    JOIN wholesaler_profiles wp ON wp.user_id = p.wholesaler_id
     ${publicProductJoins}
     WHERE v.id IN (${ids})`);
 
@@ -126,17 +110,13 @@ export async function loadVariantLines(db: Executor, variantIds: readonly string
         variantName: r.variant_name,
         mrpPaise: Number(r.mrp_paise),
         pricePaise: Number(r.price_paise),
-        stockQty: r.stock_qty,
+        stockQty: Number(r.stock_qty),
         minOrderQty: r.min_order_qty,
         slabs: r.slabs.map((s) => ({ minQty: Number(s.minQty), pricePaise: Number(s.pricePaise) })),
         productId: r.product_id,
         productName: r.product_name,
         hsnCode: r.hsn_code,
         gstRateBps: r.gst_rate_bps,
-        wholesalerId: r.wholesaler_id,
-        businessName: r.business_name,
-        city: r.city,
-        commissionBps: r.commission_bps,
         thumbKey: r.thumb_key,
         available: r.available,
       },
@@ -204,7 +184,7 @@ export class CartService {
     );
     const settings = await this.settings.get();
 
-    const groups = new Map<string, { wholesaler: CartGroup['wholesaler']; commissionBps: number | null; lines: CartLine[] }>();
+    const lines: CartLine[] = [];
     for (const item of items) {
       const v = variants.get(item.variantId);
       if (!v) continue; // variant deleted; cascades remove it shortly
@@ -216,12 +196,7 @@ export class CartService {
           : item.qty > v.stockQty
             ? 'OUT_OF_STOCK'
             : null;
-      const group = groups.get(v.wholesalerId) ?? {
-        wholesaler: { id: v.wholesalerId, businessName: v.businessName, city: v.city },
-        commissionBps: v.commissionBps,
-        lines: [],
-      };
-      group.lines.push({
+      lines.push({
         variantId: v.variantId,
         productId: v.productId,
         productName: v.productName,
@@ -235,15 +210,10 @@ export class CartService {
         stockQty: v.stockQty,
         issue,
       });
-      groups.set(v.wholesalerId, group);
     }
 
     // Only orderable lines count towards money.
-    const list = [...groups.values()];
-    const subtotals = list.map((g) =>
-      g.lines.filter((l) => !l.issue).reduce((sum, l) => sum + l.lineTotalPaise, 0),
-    );
-    const subtotalPaise = subtotals.reduce((a, b) => a + b, 0);
+    const subtotalPaise = lines.filter((l) => !l.issue).reduce((sum, l) => sum + l.lineTotalPaise, 0);
 
     let coupon: Cart['coupon'] = null;
     let couponError: string | null = null;
@@ -253,44 +223,20 @@ export class CartService {
       else couponError = result.error;
     }
 
-    const orderable = list.map((g, i) => ({ g, subtotal: subtotals[i] as number })).filter((x) => x.subtotal > 0);
-    const totals = priceOrderGroups(
-      orderable.map((x) => ({ wholesalerId: x.g.wholesaler.id, subtotalPaise: x.subtotal, commissionBps: x.g.commissionBps })),
-      {
-        discountPaise: coupon?.discountPaise ?? 0,
-        deliveryFeePaise: settings.deliveryFeePaise,
-        defaultCommissionBps: settings.commissionBps,
-      },
-    );
-    const byWholesaler = new Map(totals.map((t) => [t.wholesalerId, t]));
-
-    const cartGroups: CartGroup[] = list.map((g, i) => {
-      const t = byWholesaler.get(g.wholesaler.id);
-      const subtotal = subtotals[i] as number;
-      return {
-        wholesaler: g.wholesaler,
-        lines: g.lines,
-        subtotalPaise: subtotal,
-        discountPaise: t?.discountPaise ?? 0,
-        deliveryFeePaise: t?.deliveryFeePaise ?? 0,
-        totalPaise: t?.totalPaise ?? 0,
-        belowMinOrder: subtotal > 0 && subtotal < settings.minOrderPaise,
-      };
-    });
-
-    const allLines = cartGroups.flatMap((g) => g.lines);
+    const totals = orderTotals(subtotalPaise, coupon?.discountPaise ?? 0, subtotalPaise > 0 ? settings.deliveryFeePaise : 0);
+    const belowMinOrder = subtotalPaise > 0 && subtotalPaise < settings.minOrderPaise;
     return {
-      groups: cartGroups,
-      itemCount: allLines.length,
+      lines,
+      itemCount: lines.length,
       subtotalPaise,
-      discountPaise: coupon?.discountPaise ?? 0,
-      deliveryFeePaise: totals.reduce((s, t) => s + t.deliveryFeePaise, 0),
-      totalPaise: totals.reduce((s, t) => s + t.totalPaise, 0),
+      discountPaise: totals.discountPaise,
+      deliveryFeePaise: totals.deliveryFeePaise,
+      totalPaise: totals.totalPaise,
       coupon,
       couponError,
       minOrderPaise: settings.minOrderPaise,
-      canCheckout:
-        allLines.length > 0 && allLines.every((l) => !l.issue) && cartGroups.every((g) => !g.belowMinOrder),
+      belowMinOrder,
+      canCheckout: lines.length > 0 && lines.every((l) => !l.issue) && !belowMinOrder,
     };
   }
 }

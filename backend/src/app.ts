@@ -19,7 +19,9 @@ import {
   wholesalerInvoiceRoutes,
 } from './modules/invoices/invoices.js';
 import { AccountService, accountRoutes, adminAccountRoutes, publicAccountRoutes } from './modules/account/account.js';
+import { privacyPage } from './modules/account/privacy-page.js';
 import { adminFinanceRoutes, FinanceService, wholesalerFinanceRoutes } from './modules/finance/finance.js';
+import { AnnouncementService, adminAnnouncementRoutes } from './modules/announcements/announcements.js';
 import { adminMarketingRoutes, bannerRoutes, MarketingService } from './modules/marketing/marketing.js';
 import { adminReportRoutes, ReportsService, wholesalerReportRoutes } from './modules/reports/reports.js';
 import { adminReviewRoutes, reviewRoutes, ReviewsService } from './modules/reviews/reviews.js';
@@ -157,7 +159,7 @@ export async function buildApp({ env, db, checks, messaging, storage, push }: Ap
     authenticate,
   });
   await app.register(catalogRoutes, { prefix: '/v1', ...catalog });
-  await app.register(wholesalerProductRoutes, { prefix: '/v1/wholesaler/products', ...catalog });
+  await app.register(wholesalerProductRoutes, { prefix: '/v1/wholesaler/catalog', ...catalog });
   await app.register(adminCatalogRoutes, { prefix: '/v1/admin', ...catalog });
 
   const settings = new SettingsService(db);
@@ -194,6 +196,11 @@ export async function buildApp({ env, db, checks, messaging, storage, push }: Ap
   const marketing = { marketing: new MarketingService(db, images), authenticate };
   await app.register(bannerRoutes, { prefix: '/v1', ...marketing });
   await app.register(adminMarketingRoutes, { prefix: '/v1/admin', ...marketing });
+  await app.register(adminAnnouncementRoutes, {
+    prefix: '/v1/admin/announcements',
+    announcements: new AnnouncementService(db, notifications),
+    authenticate,
+  });
 
   const moderation = { reviews: new ReviewsService(db, catalog.products), authenticate };
   await app.register(reviewRoutes, { prefix: '/v1', ...moderation });
@@ -206,7 +213,16 @@ export async function buildApp({ env, db, checks, messaging, storage, push }: Ap
 
   const closing = { account: new AccountService(db, finance), authenticate };
   await app.register(accountRoutes, { prefix: '/v1/me', ...closing });
-  await app.register(publicAccountRoutes, closing);
+  await app.register(publicAccountRoutes, {
+    ...closing,
+    privacyHtml: privacyPage({
+      legalName: env.LEGAL_NAME,
+      legalAddress: env.LEGAL_ADDRESS,
+      grievanceOfficer: env.GRIEVANCE_OFFICER,
+      privacyEmail: env.PRIVACY_EMAIL,
+      version: env.CONSENT_VERSION,
+    }),
+  });
   await app.register(adminAccountRoutes, { prefix: '/v1/admin/account-deletion-requests', ...closing });
 
   const billing = { invoices: new InvoicesService(db), authenticate };

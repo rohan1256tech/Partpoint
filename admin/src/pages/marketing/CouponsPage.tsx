@@ -1,4 +1,4 @@
-import { Alert, Badge, Button, Group, Loader, Modal, NumberInput, SegmentedControl, Stack, Switch, Table, Text, TextInput, Title } from '@mantine/core';
+import { Alert, Badge, Button, Group, Loader, Modal, NumberInput, SegmentedControl, Stack, Switch, Table, TextInput, Title } from '@mantine/core';
 import { DateTimePicker } from '@mantine/dates';
 import { IconPlus } from '@tabler/icons-react';
 import { useQuery } from '@tanstack/react-query';
@@ -8,6 +8,9 @@ import type { Coupon } from '../../api/types';
 import { PercentInput, RupeeInput } from '../../components/MoneyInput';
 import { count, date, rupees } from '../../lib/format';
 import { useAction } from '../../lib/mutations';
+import { rowLink } from '../../lib/rowLink';
+import { IconTicket } from '@tabler/icons-react';
+import { EmptyState } from '../../components/EmptyState';
 
 type Draft = Omit<Coupon, 'id' | 'timesUsed' | 'startsAt' | 'endsAt'> & { id?: string; startsAt: Date | null; endsAt: Date | null };
 
@@ -78,7 +81,7 @@ export function CouponsPage() {
       {isLoading ? (
         <Loader />
       ) : (data?.items ?? []).length === 0 ? (
-        <Text c="dimmed">No coupons yet.</Text>
+        <EmptyState icon={IconTicket} title="No coupons yet">Create a code retailers can apply at checkout, e.g. 10% off a first order.</EmptyState>
       ) : (
         <Table highlightOnHover>
           <Table.Thead>
@@ -97,8 +100,7 @@ export function CouponsPage() {
               return (
                 <Table.Tr
                   key={c.id}
-                  style={{ cursor: 'pointer' }}
-                  onClick={() => setDraft({ ...c, startsAt: c.startsAt ? new Date(c.startsAt) : null, endsAt: c.endsAt ? new Date(c.endsAt) : null })}
+                  {...rowLink(() => setDraft({ ...c, startsAt: c.startsAt ? new Date(c.startsAt) : null, endsAt: c.endsAt ? new Date(c.endsAt) : null }))}
                 >
                   <Table.Td ff="monospace" fw={600}>
                     {c.code}

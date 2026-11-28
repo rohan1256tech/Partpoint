@@ -3,7 +3,7 @@ import { eq } from 'drizzle-orm';
 import { retailerProfiles } from '../src/db/schema.js';
 import { csvCell, toCsv } from '../src/lib/csv.js';
 import { deliveryOtp } from '../src/modules/orders/delivery-otp.js';
-import { api, createTestApp, resetDb, signIn, testEnv, type TestContext } from './helpers.js';
+import { api, catalogProduct, forward, supply, createTestApp, resetDb, signIn, testEnv, type TestContext } from './helpers.js';
 
 const BOM = String.fromCharCode(0xfeff);
 
@@ -40,17 +40,16 @@ beforeEach(async () => {
   wholesaler = await signIn(t, 'wholesaler', { name: 'Bharat Spares' });
   retailer = await signIn(t, 'retailer', { name: 'Ravi Sharma' });
   rider = await signIn(t, 'delivery');
-  const categoryId = (await http.post('/v1/admin/categories', admin, { name: 'Engine' })).json().id;
-  const p = (
-    await http.post('/v1/wholesaler/products', wholesaler.token, {
-      categoryId,
-      name: 'Oil Filter',
-      variants: [{ name: 'Single', mrpPaise: 50_000, pricePaise: 40_000, stockQty: 1_000 }],
-    })
-  ).json();
-  await http.post(`/v1/wholesaler/products/${p.id}/publish`, wholesaler.token);
-  productId = p.id;
-  variantId = p.variants[0].id;
+  const categoryId = (await http.post('/v1/admin/categories', admin, { name: 'Chargers' })).json().id;
+  const p = await catalogProduct(http, admin, {
+    categoryId,
+    name: '20W USB-C Fast Charger',
+    variants: [{ name: 'White', mrpPaise: 50_000, pricePaise: 40_000 }],
+  });
+  productId = p.productId;
+  variantId = p.variantId;
+  // Supplied at ₹380: Partpoint keeps 5% of the ₹400 price.
+  await supply(http, wholesaler.token, variantId, 38_000, 1_000);
   addressId = (
     await http.post('/v1/me/addresses', retailer.token, {
       contactName: 'Ravi',
@@ -76,6 +75,7 @@ async function placedOrder(qty = 5, extra: Record<string, unknown> = {}): Promis
 /** Runs an order all the way to delivered. 5 × ₹400 = ₹2,000 goods by default. */
 async function deliveredOrder(qty = 5): Promise<string> {
   const id = await placedOrder(qty);
+  await forward(http, admin, id, wholesaler.id);
   await http.post(`/v1/wholesaler/orders/${id}/accept`, wholesaler.token);
   await http.post(`/v1/wholesaler/orders/${id}/pack`, wholesaler.token);
   await http.post(`/v1/admin/orders/${id}/assign`, admin, { deliveryPartnerId: rider.id });
@@ -127,16 +127,16 @@ describe('banners', () => {
 
   it('shows only live banners in order, and reflects edits immediately', async () => {
     const a = (await http.post('/v1/admin/banners', admin, { title: 'Diwali sale', imageKey, sortOrder: 2 })).json();
-    await http.post('/v1/admin/banners', admin, { title: 'Brakes week', imageKey, sortOrder: 1, linkType: 'category', linkValue: a.id });
+    await http.post('/v1/admin/banners', admin, { title: 'Chargers week', imageKey, sortOrder: 1, linkType: 'category', linkValue: a.id });
     await http.post('/v1/admin/banners', admin, { title: 'Old', imageKey, endsAt: '2020-01-01T00:00:00Z' });
     await http.post('/v1/admin/banners', admin, { title: 'Off', imageKey, isActive: false });
 
     const live = async () => (await http.get('/v1/banners', retailer.token)).json().items.map((b: { title: string }) => b.title);
-    expect(await live()).toEqual(['Brakes week', 'Diwali sale']);
+    expect(await live()).toEqual(['Chargers week', 'Diwali sale']);
     expect((await http.get('/v1/banners', retailer.token)).json().items[1].imageUrl).toBe(`https://img.test/${imageKey}`);
 
     await http.patch(`/v1/admin/banners/${a.id}`, admin, { isActive: false });
-    expect(await live()).toEqual(['Brakes week']);
+    expect(await live()).toEqual(['Chargers week']);
     expect((await http.del(`/v1/admin/banners/${a.id}`, admin)).statusCode).toBe(204);
     const adminList = (await http.get('/v1/admin/banners', admin)).json().items;
     expect(adminList).toHaveLength(3);
@@ -190,7 +190,7 @@ describe('reviews and moderation', () => {
     expect((await http.post(`/v1/reviews/${review.id}/report`, wholesaler.token, { reason: 'Again' })).statusCode).toBe(204);
 
     const queue = (await http.get('/v1/admin/reviews?reported=true', admin)).json().items;
-    expect(queue).toMatchObject([{ id: review.id, openReports: 1, reportReasons: ['Fake review'], productName: 'Oil Filter' }]);
+    expect(queue).toMatchObject([{ id: review.id, openReports: 1, reportReasons: ['Fake review'], productName: '20W USB-C Fast Charger' }]);
 
     expect((await http.post(`/v1/admin/reviews/${review.id}/hide`, admin)).statusCode).toBe(204);
     expect((await http.get(`/v1/products/${productId}/reviews`, retailer.token)).json().items).toEqual([]);
@@ -274,7 +274,7 @@ describe('dashboard and reports', () => {
     expect(d.sales).toMatchObject({ gmvTodayPaise: 280_000, commissionThisMonthPaise: 10_000 });
     expect(d.last30Days).toHaveLength(30);
     expect(d.last30Days.at(-1)).toMatchObject({ orders: 2, gmvPaise: 280_000 });
-    expect(d.topProducts[0]).toMatchObject({ name: 'Oil Filter', qty: 7 });
+    expect(d.topProducts[0]).toMatchObject({ name: '20W USB-C Fast Charger', qty: 7 });
     expect((await http.get('/v1/admin/dashboard', wholesaler.token)).statusCode).toBe(403);
   });
 
@@ -311,10 +311,10 @@ describe('dashboard and reports', () => {
       goodsPaise: 200_000,
       commissionPaise: 10_000,
       netPaise: 190_000,
-      products: [{ name: 'Oil Filter', variant: 'Single', qty: 5, salesPaise: 200_000 }],
+      products: [{ name: '20W USB-C Fast Charger', variant: 'White', qty: 5, salesPaise: 200_000 }],
     });
     const csv = await http.get(`/v1/wholesaler/reports/sales?from=${today}&to=${today}&format=csv`, wholesaler.token);
-    expect(csv.body).toContain('Oil Filter,Single,5,2000.00');
+    expect(csv.body).toContain('20W USB-C Fast Charger,White,5,2000.00');
 
     // Another wholesaler sees nothing of it.
     const other = await signIn(t, 'wholesaler');

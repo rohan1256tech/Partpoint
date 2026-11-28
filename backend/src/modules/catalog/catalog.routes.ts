@@ -11,12 +11,13 @@ import {
   categoryUpdate,
   idParams,
   imageParams,
-  ownProductsQuery,
+  offerBody,
+  optionalReasonBody,
   productCreate,
   productImageAttach,
   productImageUpload,
   productUpdate,
-  reasonBody,
+  supplierCatalogQuery,
   uploadRequest,
   variantInput,
   variantParams,
@@ -51,50 +52,16 @@ export const catalogRoutes: FastifyPluginAsync<Deps> = async (app, { products, t
   app.get('/products/:id', async (req) => products.getPublic(parse(idParams, req.params).id));
 };
 
-/** Mounted at /v1/wholesaler/products. A wholesaler's own catalog. */
+/** Mounted at /v1/wholesaler/catalog. The catalog a wholesaler supplies, and their offers. */
 export const wholesalerProductRoutes: FastifyPluginAsync<Deps> = async (app, { products, authenticate }) => {
   app.addHook('preHandler', authenticate({ roles: ['wholesaler'] }));
   const me = (req: Parameters<typeof currentUser>[0]) => currentUser(req).id;
 
-  app.get('/', async (req) => products.listOwn(me(req), parse(ownProductsQuery, req.query)));
-
-  app.post('/', async (req, reply) => {
-    const product = await products.create(me(req), parse(productCreate, req.body));
-    return reply.status(201).send(product);
-  });
-
-  app.get('/:id', async (req) => products.getOwn(me(req), parse(idParams, req.params).id));
-
-  app.patch('/:id', async (req) =>
-    products.update(me(req), parse(idParams, req.params).id, parse(productUpdate, req.body)),
+  app.get('/', async (req) => products.supplierCatalog(me(req), parse(supplierCatalogQuery, req.query)));
+  app.get('/:id', async (req) => products.supplierProduct(me(req), parse(idParams, req.params).id));
+  app.put('/variants/:variantId/offer', async (req) =>
+    products.setOffer(me(req), parse(variantParams, req.params).variantId, parse(offerBody, req.body)),
   );
-
-  app.post('/:id/publish', async (req) => products.setVisibility(me(req), parse(idParams, req.params).id, 'active'));
-  app.post('/:id/hide', async (req) => products.setVisibility(me(req), parse(idParams, req.params).id, 'hidden'));
-
-  app.post('/:id/variants', async (req, reply) => {
-    const product = await products.addVariant(me(req), parse(idParams, req.params).id, parse(variantInput, req.body));
-    return reply.status(201).send(product);
-  });
-
-  app.patch('/variants/:variantId', async (req) =>
-    products.updateVariant(me(req), parse(variantParams, req.params).variantId, parse(variantUpdate, req.body)),
-  );
-
-  app.post('/:id/images/upload-url', async (req) => {
-    const { sizeBytes } = parse(productImageUpload, req.body);
-    return products.imageUploadUrl(me(req), parse(idParams, req.params).id, sizeBytes);
-  });
-
-  app.post('/:id/images', async (req, reply) => {
-    const { objectKey } = parse(productImageAttach, req.body);
-    return reply.status(201).send(await products.attachImage(me(req), parse(idParams, req.params).id, objectKey));
-  });
-
-  app.delete('/:id/images/:imageId', async (req) => {
-    const { id, imageId } = parse(imageParams, req.params);
-    return products.removeImage(me(req), id, imageId);
-  });
 };
 
 /** Mounted at /v1/admin. Taxonomy, product moderation and admin image uploads. */
@@ -123,16 +90,40 @@ export const adminCatalogRoutes: FastifyPluginAsync<Deps> = async (
     taxonomy.updateBrand(adminId(req), parse(idParams, req.params).id, parse(brandUpdate, req.body), req.ip),
   );
 
-  // ---- products
+  // ---- products: Partpoint's catalog
   app.get('/products', async (req) => products.listAll(parse(adminProductsQuery, req.query)));
-  app.get('/products/:id', async (req) => products.getAny(parse(idParams, req.params).id));
-  app.post('/products/:id/block', async (req) => {
-    const { reason } = parse(reasonBody, req.body);
-    return products.moderate(adminId(req), parse(idParams, req.params).id, 'block', reason, req.ip);
-  });
-  app.post('/products/:id/unblock', async (req) =>
-    products.moderate(adminId(req), parse(idParams, req.params).id, 'unblock', null, req.ip),
+  app.post('/products', async (req, reply) =>
+    reply.status(201).send(await products.create(adminId(req), parse(productCreate, req.body), req.ip)),
   );
+  app.get('/products/:id', async (req) => products.getAny(parse(idParams, req.params).id));
+  app.patch('/products/:id', async (req) =>
+    products.update(adminId(req), parse(idParams, req.params).id, parse(productUpdate, req.body), req.ip),
+  );
+  app.post('/products/:id/publish', async (req) =>
+    products.setVisibility(adminId(req), parse(idParams, req.params).id, 'active', null, req.ip),
+  );
+  app.post('/products/:id/hide', async (req) => {
+    const { reason } = parse(optionalReasonBody, req.body ?? {});
+    return products.setVisibility(adminId(req), parse(idParams, req.params).id, 'hidden', reason ?? null, req.ip);
+  });
+  app.post('/products/:id/variants', async (req, reply) =>
+    reply.status(201).send(await products.addVariant(parse(idParams, req.params).id, parse(variantInput, req.body))),
+  );
+  app.patch('/products/variants/:variantId', async (req) =>
+    products.updateVariant(parse(variantParams, req.params).variantId, parse(variantUpdate, req.body)),
+  );
+  app.post('/products/:id/images/upload-url', async (req) => {
+    const { sizeBytes } = parse(productImageUpload, req.body);
+    return products.imageUploadUrl(parse(idParams, req.params).id, sizeBytes);
+  });
+  app.post('/products/:id/images', async (req, reply) => {
+    const { objectKey } = parse(productImageAttach, req.body);
+    return reply.status(201).send(await products.attachImage(parse(idParams, req.params).id, objectKey));
+  });
+  app.delete('/products/:id/images/:imageId', async (req) => {
+    const { id, imageId } = parse(imageParams, req.params);
+    return products.removeImage(id, imageId);
+  });
 
   // ---- uploads (category images, brand logos, banners)
   app.post('/uploads', async (req) => {

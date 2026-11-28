@@ -54,8 +54,13 @@ export const discountType = pgEnum('discount_type', ['percent', 'flat']);
 /** 'placed': orders created without online payment (settled offline in v1). The rest are for a future gateway. */
 export const checkoutStatus = pgEnum('checkout_status', ['pending_payment', 'paid', 'failed', 'expired', 'placed']);
 export const paymentStatus = pgEnum('payment_status', ['created', 'authorized', 'captured', 'failed', 'refunded']);
+/**
+ * placed: waiting for Partpoint (the admin) to choose a wholesaler.
+ * forwarded: sent to a wholesaler, who accepts it (or hands it back to the admin).
+ */
 export const orderStatus = pgEnum('order_status', [
   'placed',
+  'forwarded',
   'accepted',
   'packed',
   'assigned',
@@ -262,13 +267,11 @@ export const brands = pgTable(
   (t) => [uniqueIndex('brands_slug_uq').on(t.slug)],
 );
 
+/** Partpoint's catalog, maintained by the admin. Wholesalers supply it through supplier_offers. */
 export const products = pgTable(
   'products',
   {
     id: id(),
-    wholesalerId: uuid()
-      .notNull()
-      .references(() => users.id),
     categoryId: uuid()
       .notNull()
       .references(() => categories.id),
@@ -279,7 +282,7 @@ export const products = pgTable(
     hsnCode: text(),
     gstRateBps: integer().notNull().default(1800),
     status: productStatus().notNull().default('draft'),
-    /** Why an admin blocked the product; shown to the wholesaler. */
+    /** Admin note on why the product is hidden or blocked. */
     statusReason: text(),
     ratingAvg: doublePrecision().notNull().default(0),
     ratingCount: integer().notNull().default(0),
@@ -287,7 +290,6 @@ export const products = pgTable(
     updatedAt: updatedAt(),
   },
   (t) => [
-    index('products_wholesaler_idx').on(t.wholesalerId),
     index('products_category_status_idx').on(t.categoryId, t.status),
     index('products_brand_idx').on(t.brandId),
     index('products_status_created_idx').on(t.status, t.createdAt.desc(), t.id.desc()),
@@ -305,10 +307,10 @@ export const productVariants = pgTable(
       .notNull()
       .references(() => products.id, { onDelete: 'cascade' }),
     sku: text(),
-    name: text().notNull(), // e.g. "Pack of 10", "Front - Left"
+    name: text().notNull(), // e.g. "Black", "With frame", "Pack of 10"
     mrpPaise: paise().notNull(),
+    /** What retailers pay Partpoint (GST inclusive). */
     pricePaise: paise().notNull(),
-    stockQty: integer().notNull().default(0),
     minOrderQty: integer().notNull().default(1),
     isActive: boolean().notNull().default(true),
     createdAt: createdAt(),
@@ -316,7 +318,6 @@ export const productVariants = pgTable(
   },
   (t) => [
     index('product_variants_product_idx').on(t.productId),
-    check('product_variants_stock_ck', sql`${t.stockQty} >= 0`),
     check('product_variants_price_ck', sql`${t.pricePaise} > 0 AND ${t.pricePaise} <= ${t.mrpPaise}`),
     check('product_variants_moq_ck', sql`${t.minOrderQty} >= 1`),
   ],
@@ -337,6 +338,34 @@ export const priceSlabs = pgTable(
     uniqueIndex('price_slabs_variant_qty_uq').on(t.variantId, t.minQty),
     check('price_slabs_qty_ck', sql`${t.minQty} >= 2`),
     check('price_slabs_price_ck', sql`${t.pricePaise} > 0`),
+  ],
+);
+
+/**
+ * A wholesaler's stock of one catalog variant and the price Partpoint pays them for it.
+ * Retailers never see these; the admin uses them to choose who fulfils an order.
+ */
+export const supplierOffers = pgTable(
+  'supplier_offers',
+  {
+    id: id(),
+    wholesalerId: uuid()
+      .notNull()
+      .references(() => users.id),
+    variantId: uuid()
+      .notNull()
+      .references(() => productVariants.id, { onDelete: 'cascade' }),
+    supplyPricePaise: paise().notNull(),
+    stockQty: integer().notNull().default(0),
+    isActive: boolean().notNull().default(true),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [
+    uniqueIndex('supplier_offers_wholesaler_variant_uq').on(t.wholesalerId, t.variantId),
+    index('supplier_offers_variant_idx').on(t.variantId),
+    check('supplier_offers_stock_ck', sql`${t.stockQty} >= 0`),
+    check('supplier_offers_price_ck', sql`${t.supplyPricePaise} > 0`),
   ],
 );
 
@@ -428,7 +457,7 @@ export const banners = pgTable('banners', {
 // Checkout, payments, orders
 // ---------------------------------------------------------------------------
 
-/** One retailer checkout (one payment). Split into one order per wholesaler once paid. */
+/** One retailer checkout (one payment). Starts as one order; the admin may split it across wholesalers. */
 export const checkouts = pgTable(
   'checkouts',
   {
@@ -498,7 +527,10 @@ export const payments = pgTable(
   ],
 );
 
-/** Order handled by one wholesaler and (optionally) one delivery partner. */
+/**
+ * An order (or one part of a split order). The wholesaler is empty until the admin forwards it;
+ * a split creates sibling orders in the same checkout, numbered PP-…-000042-2, -3 and so on.
+ */
 export const orders = pgTable(
   'orders',
   {
@@ -510,9 +542,7 @@ export const orders = pgTable(
     retailerId: uuid()
       .notNull()
       .references(() => users.id),
-    wholesalerId: uuid()
-      .notNull()
-      .references(() => users.id),
+    wholesalerId: uuid().references(() => users.id),
     deliveryPartnerId: uuid().references(() => users.id),
     status: orderStatus().notNull().default('placed'),
     addressSnapshot: jsonb().notNull(),
@@ -520,6 +550,7 @@ export const orders = pgTable(
     discountPaise: paise().notNull().default(0),
     deliveryFeePaise: paise().notNull().default(0),
     totalPaise: paise().notNull(),
+    /** Partpoint's margin: goods value (after discount) minus what the wholesaler is paid. Set on forwarding. */
     commissionPaise: paise().notNull().default(0),
     deliveryOtpHash: text(), // unused: the delivery OTP is derived from OTP_SECRET + order id (see delivery-otp.ts)
     /** When the assigned delivery partner accepted the job. */
@@ -569,6 +600,8 @@ export const orderItems = pgTable(
     qty: integer().notNull(),
     unitPricePaise: paise().notNull(),
     lineTotalPaise: paise().notNull(),
+    /** What the wholesaler is paid per unit; set when the admin forwards the order. */
+    supplyUnitPricePaise: paise(),
   },
   (t) => [index('order_items_order_idx').on(t.orderId), check('order_items_qty_ck', sql`${t.qty} > 0`)],
 );

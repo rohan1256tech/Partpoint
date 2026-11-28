@@ -10,6 +10,7 @@ import { parse } from '../../lib/validate.js';
 import { currentUser, type Authenticate } from '../../plugins/auth.js';
 import type { AddressSnapshot } from '../addresses/addresses.js';
 import { computeInvoice, financialYear, taxMode, type Invoice } from './invoice-calc.js';
+import { BRAND, ORDER_PREFIX } from '../../lib/brand.js';
 
 type Tx = Parameters<Parameters<Database['transaction']>[0]>[0];
 
@@ -34,13 +35,16 @@ export async function assignInvoice(tx: Tx, orderId: string): Promise<void> {
     .from(orders)
     .where(eq(orders.id, orderId));
   if (!o || o.invoiceNumber) return;
+  // Packing needs a wholesaler, so this only guards against a broken caller.
+  if (!o.wholesalerId) throw new Error('cannot invoice an order without a wholesaler');
+  const wholesalerId = o.wholesalerId;
 
   const now = new Date();
   const fy = financialYear(now);
   // Upsert-and-increment is atomic per (wholesaler, year): serials are consecutive with no duplicates.
   const [counter] = await tx
     .insert(invoiceCounters)
-    .values({ wholesalerId: o.wholesalerId, financialYear: fy, lastSerial: 1 })
+    .values({ wholesalerId, financialYear: fy, lastSerial: 1 })
     .onConflictDoUpdate({
       target: [invoiceCounters.wholesalerId, invoiceCounters.financialYear],
       set: { lastSerial: sql`${invoiceCounters.lastSerial} + 1` },
@@ -57,7 +61,7 @@ export async function assignInvoice(tx: Tx, orderId: string): Promise<void> {
       pincode: wholesalerProfiles.pincode,
     })
     .from(wholesalerProfiles)
-    .where(eq(wholesalerProfiles.userId, o.wholesalerId));
+    .where(eq(wholesalerProfiles.userId, wholesalerId));
   const [buyer] = await tx
     .select({ shopName: retailerProfiles.shopName, gstin: retailerProfiles.gstin })
     .from(retailerProfiles)
@@ -68,7 +72,7 @@ export async function assignInvoice(tx: Tx, orderId: string): Promise<void> {
   await tx
     .update(orders)
     .set({
-      invoiceNumber: `PP${fy}-${String(counter?.serial).padStart(6, '0')}`, // 13 chars; GST allows 16
+      invoiceNumber: `${ORDER_PREFIX}${fy}-${String(counter?.serial).padStart(6, '0')}`, // 13 chars; GST allows 16
       invoiceDate: now,
       invoiceSnapshot: snapshot,
     })
@@ -263,9 +267,9 @@ function renderInvoicePdf(d: InvoiceDocument, compress: boolean): Promise<Buffer
     'Prices are inclusive of GST.',
     inv.mode === 'none' ? 'Supplier not registered under GST: no tax charged on this bill of supply.' : null,
     d.deliveryFeePaise > 0
-      ? `Delivery fee of ${money(d.deliveryFeePaise)} is charged by Partpoint separately and is not part of this invoice.`
+      ? `Delivery fee of ${money(d.deliveryFeePaise)} is charged by ${BRAND} separately and is not part of this invoice.`
       : null,
-    `Sold by ${seller.businessName} through the Partpoint marketplace. This is a computer-generated invoice and needs no signature.`,
+    `Sold by ${seller.businessName} through the ${BRAND} marketplace. This is a computer-generated invoice and needs no signature.`,
   ].filter((n): n is string => !!n);
   pdf.font('Helvetica').fontSize(7.5).fillColor('#555').text(notes.join('\n'), left, y, { width });
 

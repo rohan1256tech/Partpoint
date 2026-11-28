@@ -25,7 +25,7 @@ const get = (url: string, token?: string) =>
   t.app.inject({ method: 'GET', url, ...(token ? { headers: { authorization: `Bearer ${token}` } } : {}) });
 
 const device = { app: 'partpoint', deviceId: 'device-aaaa-1111' } as const;
-const retailerProfile = { role: 'retailer', shopName: 'Sharma Auto Parts' } as const;
+const retailerProfile = { role: 'retailer', shopName: 'Sharma Mobile Repair' } as const;
 
 /** Full phone signup; returns tokens and the user. */
 async function signUpRetailer(phone = '9876543210', d: { app: string; deviceId: string } = device) {
@@ -62,7 +62,7 @@ describe('phone OTP signup and login', () => {
       role: 'retailer',
       status: 'pending',
       phone: '+919876543210',
-      profile: { shopName: 'Sharma Auto Parts' },
+      profile: { shopName: 'Sharma Mobile Repair' },
     });
 
     const [row] = await t.db.select().from(users).where(eq(users.id, user.id));
@@ -112,7 +112,7 @@ describe('phone OTP signup and login', () => {
   it('rejects an expired code', async () => {
     await post('/v1/auth/otp/request', { phone: '9876543210' });
     const code = t.messaging.lastCodeFor('+919876543210');
-    await t.db.update(otpCodes).set({ expiresAt: new Date(Date.now() - 1000) });
+    await t.db.update(otpCodes).set({ expiresAt: new Date(Date.now() - 60_000) });
     expect((await post('/v1/auth/otp/verify', { phone: '9876543210', code, ...device })).statusCode).toBe(400);
   });
 
@@ -360,6 +360,14 @@ describe('admin approval', () => {
     const list = await get('/v1/admin/users?status=pending', admin);
     expect(list.statusCode).toBe(200);
     expect(list.json().items.map((u: { id: string }) => u.id)).toEqual([user.id]);
+    expect(list.json().items[0].businessName).toEqual(expect.any(String));
+
+    // Search matches the shop name, case-insensitively; % and _ are literal.
+    const shop = list.json().items[0].businessName as string;
+    const found = await get(`/v1/admin/users?q=${encodeURIComponent(shop.slice(0, 4).toLowerCase())}`, admin);
+    expect(found.json().items.map((u: { id: string }) => u.id)).toEqual([user.id]);
+    expect((await get('/v1/admin/users?q=%25%25', admin)).json().items).toEqual([]);
+
 
     const res = await post(`/v1/admin/users/${user.id}/approve`, {}, admin);
     expect(res.statusCode).toBe(200);

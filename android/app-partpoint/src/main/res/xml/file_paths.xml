@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Only the downloaded GST invoices are shared with the PDF viewer. -->
+<paths>
+    <cache-path name="invoices" path="invoices/" />
+</paths>
