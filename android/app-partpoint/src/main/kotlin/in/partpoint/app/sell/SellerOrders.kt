@@ -199,7 +199,7 @@ private fun SellerOrderRow(o: OrderSummary, onClick: () -> Unit) {
                 Text(o.retailer?.shopName ?: o.orderNumber, style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f))
                 StatusPill(sellerStatus(o.status), orderStatusColor(o.status))
             }
-            Text("${o.itemCount} item(s) · ${rupees(o.totalPaise)}", style = MaterialTheme.typography.bodyMedium)
+            Text("${o.itemCount} item(s) to pack", style = MaterialTheme.typography.bodyMedium)
             Text("${o.orderNumber} · ${dateTime(o.createdAt)}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
@@ -404,7 +404,7 @@ private fun NextStep(o: OrderDetail) {
     val text = when (o.status) {
         "forwarded" -> "Sakshay Connect chose your stock for this order. Check you have every item, then accept."
         "accepted" -> "Pack the items and mark the order packed. The GST invoice is created at that moment."
-        "packed" -> "Packed. Sakshay Connect is assigning a delivery partner to pick it up."
+        "packed" -> "Packed. The order is offered to nearby delivery partners; one will come to collect it. Keep the parcel and invoice ready."
         "assigned" -> "A delivery partner is coming to pick this up. Keep the parcel and invoice ready."
         "picked_up", "out_for_delivery" -> "Picked up and on its way to the retailer."
         "delivered" -> "Delivered. The amount is added to your earnings."

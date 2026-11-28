@@ -84,7 +84,7 @@ fun RiderApp(me: Me) {
                 NavigationBar {
                     TABS.forEach { t ->
                         val selected = entry?.destination?.hasRoute(t.type) == true
-                        NavigationBarItem(selected = selected, onClick = { nav.switchTo(t.route) }, icon = { Icon(if (selected) t.selected else t.icon, null) }, label = { Text(t.label) })
+                        NavigationBarItem(colors = `in`.partpoint.core.ui.brandNavColors(),selected = selected, onClick = { nav.switchTo(t.route) }, icon = { Icon(if (selected) t.selected else t.icon, null) }, label = { Text(t.label) })
                     }
                 }
             }

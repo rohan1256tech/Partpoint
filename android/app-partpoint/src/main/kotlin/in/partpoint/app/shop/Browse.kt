@@ -72,6 +72,10 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.layout
+import androidx.compose.ui.graphics.luminance
+import androidx.compose.foundation.layout.windowInsetsTopHeight
+import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -109,7 +113,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
-const val SEARCH_HINT = "Search displays, batteries, chargers…"
+const val SEARCH_HINT = "Search parts, models, brands"
 
 // ------------------------------------------------------------------------------------- home
 
@@ -161,9 +165,10 @@ fun HomeScreen(
                 LoadingScreen()
             }
             is Load.Failed -> ErrorState(s.message) { vm.reload() }
-            is Load.Ready -> PullToRefreshBox(isRefreshing = refreshing, onRefresh = vm::refreshAll, modifier = Modifier.padding(bottom = padding.calculateBottomPadding())) {
+            is Load.Ready -> Box(Modifier.padding(bottom = padding.calculateBottomPadding())) {
+             PullToRefreshBox(isRefreshing = refreshing, onRefresh = vm::refreshAll) {
                 LazyVerticalGrid(
-                    columns = GridCells.Adaptive(minSize = 160.dp),
+                    columns = GridCells.Adaptive(minSize = 148.dp),
                     state = grid,
                     contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 16.dp),
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -207,6 +212,9 @@ fun HomeScreen(
                     item(span = { GridItemSpan(maxLineSpan) }) { SectionHeader("Fresh in stock") }
                     productItems(feed, onProduct, onRetry = vm.feed::loadMore)
                 }
+             }
+             // Keeps scrolled content from running under the status bar.
+             Box(Modifier.fillMaxWidth().windowInsetsTopHeight(WindowInsets.statusBars).background(BrandColors.Ink))
             }
         }
     }
@@ -269,7 +277,8 @@ private fun PromoCard(onShop: () -> Unit) {
 private fun QuickActions(onShop: () -> Unit, onOrders: () -> Unit) {
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
         QuickTile(Icons.Outlined.Smartphone, "Spare parts\nshop", BrandColors.Yellow, BrandColors.Ink, Modifier.weight(1f), onShop)
-        QuickTile(Icons.Outlined.ReceiptLong, "My\norders", BrandColors.Ink, BrandColors.Yellow, Modifier.weight(1f), onOrders)
+        val dark = MaterialTheme.colorScheme.surface.luminance() < 0.5f
+        QuickTile(Icons.Outlined.ReceiptLong, "My\norders", if (dark) Color(0xFF34353D) else BrandColors.Ink, BrandColors.Yellow, Modifier.weight(1f), onOrders)
         QuickTile(Icons.Outlined.LocalShipping, "Track\ndelivery", BrandColors.Green, Color.White, Modifier.weight(1f), onOrders)
     }
 }
@@ -564,7 +573,7 @@ fun ProductListScreen(title: String?, query: ProductQuery, onBack: () -> Unit, o
             }
         } else {
             LazyVerticalGrid(
-                columns = GridCells.Adaptive(minSize = 160.dp),
+                columns = GridCells.Adaptive(minSize = 148.dp),
                 state = grid,
                 contentPadding = PaddingValues(16.dp),
                 horizontalArrangement = Arrangement.spacedBy(12.dp),

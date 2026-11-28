@@ -408,7 +408,7 @@ fun JobScreen(onBack: () -> Unit, vm: JobViewModel = hiltViewModel()) {
 private fun StepBanner(j: Job) {
     val (title, body) = when {
         j.isOffer -> "New delivery job" to "Accept to confirm you'll pick this up, or decline so another rider gets it."
-        j.status == "assigned" -> "Go to the pickup" to "Collect the parcel and invoice from the seller, then tap Picked up."
+        j.status == "assigned" -> "Go to the pickup" to "Collect the parcel and the GST invoice from the wholesaler, tick each item, then tap Picked up."
         j.status == "picked_up" -> "Parcel collected" to "Start the delivery when you leave for the retailer."
         j.status == "out_for_delivery" -> "Deliver the parcel" to "Hand it over, then ask the retailer for their 4-digit delivery code."
         j.status == "delivered" -> "Delivered" to "Well done. Your earning for this job has been added."

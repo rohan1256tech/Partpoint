@@ -181,3 +181,13 @@ fun SectionHeader(title: String, modifier: Modifier = Modifier, action: Pair<Str
         if (action != null) TextButton(onClick = action.second) { Text(action.first) }
     }
 }
+
+/** Bottom bar tabs: a yellow pill behind the selected icon, its label in full contrast. */
+@Composable
+fun brandNavColors() = androidx.compose.material3.NavigationBarItemDefaults.colors(
+    selectedIconColor = BrandColors.Ink,
+    indicatorColor = BrandColors.Yellow,
+    selectedTextColor = MaterialTheme.colorScheme.onSurface,
+    unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+    unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
+)

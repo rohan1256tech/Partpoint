@@ -95,6 +95,7 @@ fun SellerApp(me: Me) {
                     SELLER_TABS.forEach { t ->
                         val selected = entry?.destination?.hasRoute(t.type) == true
                         NavigationBarItem(
+                            colors = `in`.partpoint.core.ui.brandNavColors(),
                             selected = selected,
                             onClick = { nav.switchTo(t.route) },
                             icon = { Icon(if (selected) t.selected else t.icon, null) },

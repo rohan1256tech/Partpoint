@@ -150,12 +150,14 @@ private fun OrderRow(o: OrderSummary, onClick: () -> Unit) {
                     Icon(Icons.Outlined.Inventory2, null, tint = orderStatusColor(o.status))
                 }
             }
-            Column(Modifier.padding(start = 12.dp).weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                Text(o.orderNumber, style = MaterialTheme.typography.titleSmall)
+            Column(Modifier.padding(start = 12.dp).weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text(o.orderNumber, style = MaterialTheme.typography.titleSmall, maxLines = 1)
                 Text("${o.itemCount} item(s) · ${rupees(o.totalPaise)}", style = MaterialTheme.typography.bodyMedium)
-                Text(dateTime(o.createdAt), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(dateTime(o.createdAt), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.weight(1f))
+                    StatusPill(friendlyStatus(o.status), orderStatusColor(o.status))
+                }
             }
-            StatusPill(friendlyStatus(o.status), orderStatusColor(o.status))
         }
     }
 }

@@ -228,7 +228,7 @@ fun WishlistScreen(onBack: () -> Unit, onProduct: (String) -> Unit, vm: Wishlist
                 Box(Modifier.padding(padding)) { MessageState(Icons.Outlined.FavoriteBorder, "Nothing saved yet", "Tap the heart on a product to keep it here for later.") }
             } else {
                 LazyVerticalGrid(
-                    columns = GridCells.Adaptive(160.dp),
+                    columns = GridCells.Adaptive(148.dp),
                     contentPadding = PaddingValues(16.dp),
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp),

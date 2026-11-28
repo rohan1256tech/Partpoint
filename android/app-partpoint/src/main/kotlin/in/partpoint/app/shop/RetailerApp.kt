@@ -87,6 +87,7 @@ fun RetailerApp(me: Me, shell: RetailerShellViewModel = hiltViewModel()) {
                     TABS.forEach { t ->
                         val selected = entry?.destination?.hasRoute(t.type) == true
                         NavigationBarItem(
+                            colors = `in`.partpoint.core.ui.brandNavColors(),
                             selected = selected,
                             onClick = { nav.switchTab(t.route) },
                             label = { Text(t.label) },
