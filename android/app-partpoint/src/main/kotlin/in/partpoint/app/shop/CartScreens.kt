@@ -1,5 +1,6 @@
 package `in`.partpoint.app.shop
 
+import `in`.partpoint.core.ui.SecondaryButton
 import androidx.compose.foundation.layout.imePadding
 import `in`.partpoint.core.ui.Load
 import `in`.partpoint.core.ui.LoadingViewModel
@@ -32,7 +33,6 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
@@ -360,7 +360,7 @@ fun CheckoutScreen(onBack: () -> Unit, onPlaced: (PlacedOrder) -> Unit, vm: Chec
                                     onCancel = if (addresses.isEmpty()) null else ({ adding = false }),
                                 )
                             } else {
-                                OutlinedButton(onClick = { adding = true }) { Text("Add a new address") }
+                                SecondaryButton(onClick = { adding = true }) { Text("Add a new address") }
                             }
                         }
                         item {
@@ -443,7 +443,7 @@ fun AddressForm(initial: Address? = null, onSave: suspend (AddressInput) -> Unit
             Field("State", stateName, KeyboardCapitalization.Words) { stateName = it }
             ErrorText(error)
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                if (onCancel != null) OutlinedButton(onClick = onCancel) { Text("Cancel") }
+                if (onCancel != null) SecondaryButton(onClick = onCancel) { Text("Cancel") }
                 Button(
                     enabled = valid && !busy,
                     onClick = {

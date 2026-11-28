@@ -45,6 +45,8 @@ import `in`.partpoint.core.auth.ui.SessionViewModel
 import `in`.partpoint.core.auth.ui.SignedOutNotice
 import `in`.partpoint.core.network.ApiException
 import `in`.partpoint.core.ui.ErrorText
+import `in`.partpoint.core.ui.FormSection
+import `in`.partpoint.core.ui.SignupHeader
 import `in`.partpoint.core.ui.LoadingScreen
 import `in`.partpoint.core.ui.PartpointTheme
 import `in`.partpoint.core.ui.PrimaryButton
@@ -118,10 +120,15 @@ private fun RiderSignupScreen(phone: String, token: String, onBack: () -> Unit, 
     val scope = rememberCoroutineScope()
 
     ScreenColumn {
-        Text("Join as a delivery partner", style = MaterialTheme.typography.headlineSmall)
-        Text("+91 ${PhoneNumber.display(phone)} is verified.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+        SignupHeader(
+            title = "Join as a delivery partner",
+            subtitle = "Pick up packed orders from wholesalers and deliver them to shops near you.",
+            verifiedPhone = "+91 ${PhoneNumber.display(phone)}",
+        )
+        FormSection("About you")
         OutlinedTextField(name, { name = it }, label = { Text("Your name") }, singleLine = true,
             keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Words), modifier = Modifier.fillMaxWidth())
+        FormSection("Your vehicle")
         OutlinedTextField(vehicleType, { vehicleType = it.take(30) }, label = { Text("Vehicle (e.g. bike, scooter)") }, singleLine = true,
             modifier = Modifier.fillMaxWidth())
         OutlinedTextField(vehicleNumber, { vehicleNumber = it.uppercase().take(15) }, label = { Text("Vehicle number (optional)") }, singleLine = true,

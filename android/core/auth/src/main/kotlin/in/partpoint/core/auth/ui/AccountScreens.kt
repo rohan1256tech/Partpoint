@@ -1,11 +1,11 @@
 package `in`.partpoint.core.auth.ui
 
+import `in`.partpoint.core.ui.SecondaryButton
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -120,7 +120,7 @@ fun AccountActions(vm: SessionViewModel = hiltViewModel()) {
     var reason by remember { mutableStateOf("") }
     val busy by vm.busy.collectAsStateWithLifecycle()
 
-    OutlinedButton(onClick = vm::signOut, enabled = !busy, modifier = Modifier.fillMaxWidth()) { Text("Sign out") }
+    SecondaryButton(onClick = vm::signOut, enabled = !busy, modifier = Modifier.fillMaxWidth()) { Text("Sign out") }
     PrivacyPolicyButton(Modifier.fillMaxWidth())
     TextButton(onClick = { confirmDelete = true }, enabled = !busy, modifier = Modifier.fillMaxWidth()) {
         Text("Delete account", color = MaterialTheme.colorScheme.error)

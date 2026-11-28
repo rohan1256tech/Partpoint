@@ -1,5 +1,7 @@
 package `in`.partpoint.app.sell
 
+import `in`.partpoint.core.ui.itemsLabel
+import `in`.partpoint.core.ui.SecondaryButton
 import `in`.partpoint.core.auth.push.NotificationPrompt
 import `in`.partpoint.core.auth.push.RefreshOnOrderPush
 import `in`.partpoint.core.ui.Load
@@ -38,7 +40,6 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.PrimaryScrollableTabRow
 import androidx.compose.material3.Scaffold
@@ -199,7 +200,7 @@ private fun SellerOrderRow(o: OrderSummary, onClick: () -> Unit) {
                 Text(o.retailer?.shopName ?: o.orderNumber, style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f))
                 StatusPill(sellerStatus(o.status), orderStatusColor(o.status))
             }
-            Text("${o.itemCount} item(s) to pack", style = MaterialTheme.typography.bodyMedium)
+            Text("${itemsLabel(o.itemCount)} to pack", style = MaterialTheme.typography.bodyMedium)
             Text("${o.orderNumber} · ${dateTime(o.createdAt)}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
@@ -285,7 +286,7 @@ fun SellerOrderScreen(onBack: () -> Unit, vm: SellerOrderViewModel = hiltViewMod
             if (o.status == "forwarded" || o.status == "accepted") {
                 Surface(tonalElevation = 3.dp, shadowElevation = 8.dp) {
                     Row(Modifier.fillMaxWidth().navigationBarsPadding().padding(16.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        OutlinedButton(onClick = { rejecting = true }, enabled = !busy) { Text("Can't supply") }
+                        SecondaryButton(onClick = { rejecting = true }, enabled = !busy) { Text("Can't supply") }
                         Box(Modifier.weight(1f)) {
                             if (o.status == "forwarded") {
                                 PrimaryButton("Accept order", onClick = { vm.accept(showError) }, loading = busy)
@@ -355,7 +356,7 @@ fun SellerOrderScreen(onBack: () -> Unit, vm: SellerOrderViewModel = hiltViewMod
                     }
 
                     if (o.status !in setOf("forwarded", "accepted", "cancelled")) {
-                        OutlinedButton(onClick = {
+                        SecondaryButton(onClick = {
                             scope.launch {
                                 try {
                                     context.openPdf(vm.invoiceUri(o.orderNumber))

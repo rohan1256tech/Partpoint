@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
@@ -69,7 +70,7 @@ fun ScreenColumn(modifier: Modifier = Modifier, content: @Composable () -> Unit)
     Surface(Modifier.fillMaxSize()) {
         Column(
             // Scrolls, and stays clear of the keyboard (the apps draw edge to edge).
-            modifier = modifier.fillMaxSize().imePadding().verticalScroll(rememberScrollState()).padding(horizontal = 24.dp, vertical = 32.dp),
+            modifier = modifier.fillMaxSize().statusBarsPadding().imePadding().verticalScroll(rememberScrollState()).padding(horizontal = 20.dp, vertical = 16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) { content() }
     }
@@ -86,4 +87,42 @@ fun SecureScreen() {
         activity.window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
         onDispose { activity.window.clearFlags(WindowManager.LayoutParams.FLAG_SECURE) }
     }
+}
+
+/**
+ * While on screen, shows white status bar icons (for screens with a dark top, such as the home
+ * header and the splash), and restores the theme's choice when the screen leaves.
+ */
+@Composable
+fun LightStatusBarIcons() {
+    val activity = LocalContext.current as? Activity ?: return
+    val view = androidx.compose.ui.platform.LocalView.current
+    DisposableEffect(activity) {
+        val controller = androidx.core.view.WindowCompat.getInsetsController(activity.window, view)
+        val before = controller.isAppearanceLightStatusBars
+        controller.isAppearanceLightStatusBars = false
+        onDispose { controller.isAppearanceLightStatusBars = before }
+    }
+}
+
+/**
+ * The second choice next to a [PrimaryButton]: outlined, in full-contrast text. (Material's own
+ * outlined button uses muted grey text, which reads as disabled.)
+ */
+@Composable
+fun SecondaryButton(
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    content: @Composable androidx.compose.foundation.layout.RowScope.() -> Unit,
+) {
+    val scheme = androidx.compose.material3.MaterialTheme.colorScheme
+    androidx.compose.material3.OutlinedButton(
+        onClick = onClick,
+        modifier = modifier,
+        enabled = enabled,
+        colors = androidx.compose.material3.ButtonDefaults.outlinedButtonColors(contentColor = scheme.onSurface),
+        border = androidx.compose.foundation.BorderStroke(1.dp, if (enabled) scheme.outline else scheme.outlineVariant),
+        content = content,
+    )
 }

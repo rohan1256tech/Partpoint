@@ -169,7 +169,7 @@ fun StockScreen(onProduct: (String) -> Unit, vm: StockViewModel = hiltViewModel(
                         text = it
                         vm.onQuery(it)
                     },
-                    placeholder = { Text("Search the Sakshay Connect catalog") },
+                    placeholder = { Text("Search parts, models, brands", maxLines = 1) },
                     leadingIcon = { Icon(Icons.Outlined.Search, null) },
                     singleLine = true,
                     shape = RoundedCornerShape(16.dp),
@@ -326,7 +326,10 @@ private fun OfferCard(v: Variant, vm: StockProductViewModel, snackbar: SnackbarH
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
-                if (offer != null) Switch(checked = active, onCheckedChange = { active = it })
+                if (offer != null) Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Switch(checked = active, onCheckedChange = { active = it })
+                    Text(if (active) "Selling" else "Paused", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
             }
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 OutlinedTextField(

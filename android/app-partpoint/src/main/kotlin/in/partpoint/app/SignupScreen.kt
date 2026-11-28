@@ -7,16 +7,17 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Storefront
+import androidx.compose.material.icons.outlined.Warehouse
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.SegmentedButton
-import androidx.compose.material3.SegmentedButtonDefaults
-import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -43,7 +44,10 @@ import `in`.partpoint.core.auth.ui.EmailField
 import `in`.partpoint.core.auth.ui.PasswordField
 import `in`.partpoint.core.auth.ui.looksLikeEmail
 import `in`.partpoint.core.network.ApiException
+import `in`.partpoint.core.ui.ChoiceCard
 import `in`.partpoint.core.ui.ErrorText
+import `in`.partpoint.core.ui.FormSection
+import `in`.partpoint.core.ui.SignupHeader
 import `in`.partpoint.core.ui.PrimaryButton
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -120,21 +124,26 @@ fun SignupScreen(
 
     Surface(Modifier.fillMaxSize()) {
         Column(
-            Modifier.fillMaxSize().verticalScroll(rememberScrollState()).imePadding().padding(horizontal = 24.dp, vertical = 32.dp),
+            Modifier.fillMaxSize().statusBarsPadding().imePadding().verticalScroll(rememberScrollState()).padding(horizontal = 20.dp, vertical = 16.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
-            Text("Create your account", style = MaterialTheme.typography.headlineSmall)
-            if (phone != null) Text("+91 ${PhoneNumber.display(phone)} is verified.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+            SignupHeader(
+                title = "Create your account",
+                subtitle = "Tell us about your business. We check every account before it goes live.",
+                verifiedPhone = phone?.let { "+91 ${PhoneNumber.display(it)}" },
+            )
+            FormSection("I want to")
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                ChoiceCard("Buy parts", "Retail shop or repair centre", Icons.Outlined.Storefront, !wholesaler, { wholesaler = false }, Modifier.weight(1f))
+                ChoiceCard("Sell parts", "Wholesaler or distributor", Icons.Outlined.Warehouse, wholesaler, { wholesaler = true }, Modifier.weight(1f))
+            }
             if (byEmail) {
+                FormSection("Sign-in details")
                 EmailField(email, { email = it })
                 PasswordField("Choose a password", password, { password = it }, newPassword = true)
             }
 
-            SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
-                SegmentedButton(selected = !wholesaler, onClick = { wholesaler = false }, shape = SegmentedButtonDefaults.itemShape(0, 2)) { Text("I buy (retailer)") }
-                SegmentedButton(selected = wholesaler, onClick = { wholesaler = true }, shape = SegmentedButtonDefaults.itemShape(1, 2)) { Text("I sell (wholesaler)") }
-            }
-
+            FormSection("About you")
             Field("Your name", name, { name = it }, capitalize = KeyboardCapitalization.Words)
             Field(if (wholesaler) "Business name" else "Shop name", business, { business = it }, capitalize = KeyboardCapitalization.Words)
             Field(
@@ -145,6 +154,7 @@ fun SignupScreen(
                 error = if (gstinOk) null else "Check the GSTIN: 15 characters, e.g. 27AAPFU0939F1ZV",
             )
             if (wholesaler) {
+                FormSection("Pickup address")
                 Field("Address", address, { address = it })
                 Field("City", city, { city = it }, capitalize = KeyboardCapitalization.Words)
                 Field("State", state, { state = it }, capitalize = KeyboardCapitalization.Words)

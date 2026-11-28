@@ -1,5 +1,10 @@
 package `in`.partpoint.app.shop
 
+import `in`.partpoint.core.ui.SecondaryButton
+import `in`.partpoint.core.ui.ProfileHeader
+import `in`.partpoint.core.ui.MenuRow
+import `in`.partpoint.core.ui.MenuCard
+import androidx.compose.material.icons.outlined.Receipt
 import `in`.partpoint.core.ui.Load
 import `in`.partpoint.core.ui.LoadingViewModel
 import androidx.compose.foundation.clickable
@@ -29,7 +34,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -63,31 +67,14 @@ import javax.inject.Inject
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AccountScreen(me: Me, onAddresses: () -> Unit, onWishlist: () -> Unit) {
+fun AccountScreen(me: Me, onOrders: () -> Unit, onAddresses: () -> Unit, onWishlist: () -> Unit) {
     Scaffold(topBar = { TopAppBar(title = { Text("Account") }) }) { padding ->
-        Column(Modifier.padding(padding).fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Surface(shape = RoundedCornerShape(16.dp), color = MaterialTheme.colorScheme.surfaceContainerLow, modifier = Modifier.fillMaxWidth()) {
-                Column(Modifier.padding(16.dp)) {
-                    Text(me.name, style = MaterialTheme.typography.titleLarge)
-                    me.phone?.let { Text("+91 ${PhoneNumber.display(it)}", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant) }
-                    me.email?.let { Text(it, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant) }
-                }
-            }
-            Surface(shape = RoundedCornerShape(16.dp), color = MaterialTheme.colorScheme.surfaceContainerLow) {
-                Column {
-                    ListItem(
-                        headlineContent = { Text("Saved addresses") },
-                        leadingContent = { Icon(Icons.Outlined.LocationOn, null) },
-                        trailingContent = { Icon(Icons.AutoMirrored.Outlined.KeyboardArrowRight, null) },
-                        modifier = Modifier.clickableRow(onAddresses),
-                    )
-                    ListItem(
-                        headlineContent = { Text("Wishlist") },
-                        leadingContent = { Icon(Icons.Outlined.FavoriteBorder, null) },
-                        trailingContent = { Icon(Icons.AutoMirrored.Outlined.KeyboardArrowRight, null) },
-                        modifier = Modifier.clickableRow(onWishlist),
-                    )
-                }
+        Column(Modifier.padding(padding).fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+            ProfileHeader(me.name, "Retailer", listOfNotNull(me.phone?.let { "+91 ${PhoneNumber.display(it)}" }, me.email), badge = "Verified business")
+            MenuCard {
+                MenuRow(Icons.Outlined.Receipt, "My orders", "Track orders and download GST invoices", onOrders)
+                MenuRow(Icons.Outlined.LocationOn, "Saved addresses", "Where we deliver your parts", onAddresses)
+                MenuRow(Icons.Outlined.FavoriteBorder, "Wishlist", "Parts you saved for later", onWishlist)
             }
             AccountActions()
         }
@@ -175,7 +162,7 @@ fun AddressesScreen(onBack: () -> Unit, vm: AddressesViewModel = hiltViewModel()
                     if (editing == "new") {
                         AddressForm(onSave = { vm.save(null, it); editing = null }, onCancel = { editing = null })
                     } else {
-                        OutlinedButton(onClick = { editing = "new" }) { Text("Add a new address") }
+                        SecondaryButton(onClick = { editing = "new" }) { Text("Add a new address") }
                     }
                 }
             }

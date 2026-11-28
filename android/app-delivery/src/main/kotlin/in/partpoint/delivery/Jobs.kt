@@ -1,5 +1,7 @@
 package `in`.partpoint.delivery
 
+import `in`.partpoint.core.ui.itemsLabel
+import `in`.partpoint.core.ui.SecondaryButton
 import `in`.partpoint.core.auth.push.NotificationPrompt
 import `in`.partpoint.core.auth.push.RefreshOnOrderPush
 import android.content.ActivityNotFoundException
@@ -42,7 +44,6 @@ import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
@@ -239,7 +240,7 @@ private fun OpenJobCard(j: OpenJob, busy: Boolean, enabled: Boolean, onTake: () 
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
                     Text(j.orderNumber, style = MaterialTheme.typography.labelLarge)
-                    Text("Ready ${dateTime(j.readySince)} · ${j.itemCount} item(s)", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text("Ready ${dateTime(j.readySince)} · ${itemsLabel(j.itemCount)}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
                 if (j.earningPaise > 0) {
                     Text("Earn ${rupees(j.earningPaise)}", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = SavingGreen)
@@ -266,7 +267,7 @@ private fun JobCard(j: Job, onClick: () -> Unit) {
             }
             Leg(Icons.Outlined.Storefront, "Pick up", j.pickup?.businessName ?: j.wholesaler.businessName.orEmpty(), j.pickup?.let { "${it.city} ${it.pincode}" })
             Leg(Icons.Outlined.Store, "Deliver to", j.retailer?.shopName ?: j.address.contactName.orEmpty(), "${j.address.city} ${j.address.pincode}")
-            Text("${j.itemCount} item(s)", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text("${itemsLabel(j.itemCount)}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
 }
@@ -391,13 +392,18 @@ fun JobScreen(onBack: () -> Unit, vm: JobViewModel = hiltViewModel()) {
         var reason by remember { mutableStateOf("") }
         AlertDialog(
             onDismissRequest = { declining = false },
-            title = { Text("Decline this job?") },
-            text = { OutlinedTextField(reason, { reason = it.take(300) }, label = { Text("Reason (optional)") }) },
+            title = { Text("Give this job back?") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Text("It is offered again to other delivery partners nearby. Please only do this before you pick up the parcel.")
+                    OutlinedTextField(reason, { reason = it.take(300) }, label = { Text("Reason (optional)") })
+                }
+            },
             confirmButton = {
                 TextButton(onClick = {
                     declining = false
                     vm.decline(reason.trim().ifEmpty { null }, onDone = onBack, onError = showError)
-                }) { Text("Decline") }
+                }) { Text("Give back", color = MaterialTheme.colorScheme.error) }
             },
             dismissButton = { TextButton(onClick = { declining = false }) { Text("Keep job") } },
         )
@@ -443,7 +449,7 @@ private fun PlaceCard(label: String, name: String, place: Place, context: Contex
                     Text("Navigate")
                 }
                 place.phoneNumber()?.let { phone ->
-                    OutlinedButton(onClick = { context.call(phone) }) {
+                    SecondaryButton(onClick = { context.call(phone) }) {
                         Icon(Icons.Outlined.Call, null, modifier = Modifier.size(18.dp))
                         Spacer(Modifier.width(6.dp))
                         Text("Call")
@@ -461,7 +467,7 @@ private fun ActionBar(j: Job, busy: Boolean, allChecked: Boolean, vm: JobViewMod
         Column(Modifier.fillMaxWidth().navigationBarsPadding().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             when {
                 j.isOffer -> Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    OutlinedButton(onClick = onDecline, enabled = !busy) { Text("Decline") }
+                    SecondaryButton(onClick = onDecline, enabled = !busy) { Text("Decline") }
                     Column(Modifier.weight(1f)) { PrimaryButton("Accept job", onClick = { vm.accept(showError) }, loading = busy) }
                 }
                 j.status == "assigned" -> {

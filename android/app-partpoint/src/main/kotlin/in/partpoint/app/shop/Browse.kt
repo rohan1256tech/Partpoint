@@ -160,6 +160,7 @@ fun HomeScreen(
     val feed by vm.feed.state.collectAsStateWithLifecycle()
     val grid = rememberLazyGridState()
     LoadMoreWhenNearEnd(grid) { vm.feed.loadMore() }
+    `in`.partpoint.core.ui.LightStatusBarIcons()
 
     Scaffold { padding ->
         when (val s = state) {

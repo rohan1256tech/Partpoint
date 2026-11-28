@@ -19,7 +19,6 @@ import androidx.compose.material.icons.outlined.Remove
 import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -150,7 +149,7 @@ fun MessageState(icon: ImageVector, title: String, body: String? = null, action:
                 modifier = Modifier.padding(top = 6.dp),
             )
         }
-        if (action != null) OutlinedButton(onClick = action.second, modifier = Modifier.padding(top = 20.dp)) { Text(action.first) }
+        if (action != null) SecondaryButton(onClick = action.second, modifier = Modifier.padding(top = 20.dp)) { Text(action.first) }
     }
 }
 
@@ -185,3 +184,6 @@ fun orderStatusColor(status: String): Color = when (status) {
     "delivered" -> Color(0xFF15803D)
     else -> Color(0xFF6B7280)
 }
+
+/** "1 item", "3 items". */
+fun itemsLabel(n: Int): String = if (n == 1) "1 item" else "$n items"

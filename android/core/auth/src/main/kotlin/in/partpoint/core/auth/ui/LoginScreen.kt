@@ -133,7 +133,7 @@ fun LoginScreen(
 
     ScreenColumn {
         `in`.partpoint.core.ui.BrandHero(photo = `in`.partpoint.core.ui.BrandPhotos.Repair) {
-            Spacer(Modifier.height(72.dp))
+            Spacer(Modifier.height(40.dp))
             `in`.partpoint.core.ui.BrandMark(size = 56.dp)
             Spacer(Modifier.height(14.dp))
             Text(appTitle, style = MaterialTheme.typography.headlineMedium, color = androidx.compose.ui.graphics.Color.White)

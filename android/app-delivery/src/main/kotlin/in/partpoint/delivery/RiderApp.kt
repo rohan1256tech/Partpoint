@@ -1,5 +1,6 @@
 package `in`.partpoint.delivery
 
+import `in`.partpoint.core.ui.ProfileHeader
 import `in`.partpoint.core.auth.push.OpenOrderFromNotification
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -178,14 +179,8 @@ private fun Stat(label: String, value: String, modifier: Modifier) {
 @Composable
 fun ProfileScreen(me: Me) {
     Scaffold(topBar = { TopAppBar(title = { Text("Account") }) }) { padding ->
-        Column(Modifier.padding(padding).padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Surface(shape = RoundedCornerShape(16.dp), color = MaterialTheme.colorScheme.surfaceContainerLow, modifier = Modifier.fillMaxWidth()) {
-                Column(Modifier.padding(16.dp)) {
-                    Text(me.name, style = MaterialTheme.typography.titleLarge)
-                    Text("Delivery partner", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
-                    me.phone?.let { Text("+91 ${PhoneNumber.display(it)}", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant) }
-                }
-            }
+        Column(Modifier.padding(padding).verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+            ProfileHeader(me.name, "Delivery partner", listOfNotNull(me.phone?.let { "+91 ${PhoneNumber.display(it)}" }, me.email), badge = "Verified partner")
             Text(
                 "Your phone number is shared with the wholesaler and the retailer of each order you deliver, so they can reach you. Sakshay Connect does not track your location.",
                 style = MaterialTheme.typography.bodySmall,

@@ -122,7 +122,7 @@ fun RetailerApp(me: Me, shell: RetailerShellViewModel = hiltViewModel()) {
                 CartScreen(onBrowse = { nav.switchTab(HomeTab) }, onProduct = openProduct, onCheckout = { nav.navigate(Checkout) })
             }
             composable<OrdersTab> { OrdersScreen(onOrder = { nav.navigate(Order(it)) }, onBrowse = { nav.switchTab(HomeTab) }) }
-            composable<AccountTab> { AccountScreen(me, onAddresses = { nav.navigate(Addresses) }, onWishlist = { nav.navigate(Wishlist) }) }
+            composable<AccountTab> { AccountScreen(me, onOrders = { nav.switchTab(OrdersTab) }, onAddresses = { nav.navigate(Addresses) }, onWishlist = { nav.navigate(Wishlist) }) }
 
             composable<Search> { ProductListScreen(title = null, query = ProductQuery(), onBack = { nav.popBackStack() }, onProduct = openProduct) }
             composable<Products> { e ->

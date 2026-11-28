@@ -1,5 +1,6 @@
 package `in`.partpoint.app.sell
 
+import `in`.partpoint.core.ui.ProfileHeader
 import `in`.partpoint.core.auth.push.OpenOrderFromNotification
 import `in`.partpoint.core.ui.Load
 import `in`.partpoint.core.ui.LoadingViewModel
@@ -231,14 +232,8 @@ private fun Tile(label: String, value: String, modifier: Modifier) {
 @Composable
 fun SellerAccountScreen(me: Me) {
     Scaffold(topBar = { TopAppBar(title = { Text("Account") }) }) { padding ->
-        Column(Modifier.padding(padding).padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Surface(shape = RoundedCornerShape(16.dp), color = MaterialTheme.colorScheme.surfaceContainerLow, modifier = Modifier.fillMaxWidth()) {
-                Column(Modifier.padding(16.dp)) {
-                    Text(me.name, style = MaterialTheme.typography.titleLarge)
-                    Text("Wholesaler", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
-                    me.phone?.let { Text("+91 ${PhoneNumber.display(it)}", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant) }
-                }
-            }
+        Column(Modifier.padding(padding).verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+            ProfileHeader(me.name, "Wholesaler", listOfNotNull(me.phone?.let { "+91 ${PhoneNumber.display(it)}" }, me.email), badge = "Verified supplier")
             Text(
                 "To change your business details, GSTIN or bank account, contact Sakshay Connect support.",
                 style = MaterialTheme.typography.bodySmall,
