@@ -29,6 +29,7 @@ import { assignInvoice } from '../invoices/invoices.js';
 import type { NotificationService } from '../notifications/notifications.service.js';
 import { deliveryOtp } from './delivery-otp.js';
 import { marginFor, splitTotals } from './pricing.js';
+import { ORDER_PREFIX } from '../../lib/brand.js';
 
 type OrderRow = typeof orders.$inferSelect;
 type Tx = Parameters<Parameters<Database['transaction']>[0]>[0];
@@ -150,9 +151,9 @@ const TRANSITIONS = {
 } as const satisfies Record<string, { by: readonly OrderViewer[]; from: readonly OrderStatus[]; to: OrderStatus }>;
 export type OrderAction = keyof typeof TRANSITIONS;
 
-/** Order number of a part of a split order: PP-20261127-000042-2. */
+/** Order number of a part of a split order: SC-20261127-000042-2. */
 export function partNumber(orderNumber: string, part: number): string {
-  const root = /^PP-\d{8}-\d+/.exec(orderNumber)?.[0] ?? orderNumber;
+  const root = /^[A-Z]{2,4}-\d{8}-\d+/.exec(orderNumber)?.[0] ?? orderNumber;
   return `${root}-${part}`;
 }
 
@@ -235,7 +236,7 @@ export class OrdersService {
         const [order] = await tx
           .insert(orders)
           .values({
-            orderNumber: `PP-${istDate(new Date()).replace(/-/g, '')}-${String(seq?.n).padStart(6, '0')}`,
+            orderNumber: `${ORDER_PREFIX}-${istDate(new Date()).replace(/-/g, '')}-${String(seq?.n).padStart(6, '0')}`,
             checkoutId: id,
             retailerId,
             wholesalerId: null,
@@ -816,6 +817,7 @@ export class OrdersService {
       }
     });
     this.notifications.orderChanged(orderId, rule.to);
+    if (rule.to === 'packed') this.notifications.offerJob(orderId);
     return this.get(viewer, userId, orderId);
   }
 

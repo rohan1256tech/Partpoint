@@ -35,11 +35,15 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowRight
 import androidx.compose.material.icons.outlined.LocalShipping
+import androidx.compose.material.icons.outlined.LocationOn
+import androidx.compose.material.icons.outlined.KeyboardArrowDown
+import androidx.compose.material.icons.outlined.DeliveryDining
+import androidx.compose.material.icons.outlined.Smartphone
+import androidx.compose.ui.unit.sp
 import androidx.compose.material.icons.outlined.ReceiptLong
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.SearchOff
 import androidx.compose.material.icons.outlined.Star
-import androidx.compose.material.icons.outlined.Verified
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -109,7 +113,7 @@ const val SEARCH_HINT = "Search displays, batteries, chargers…"
 
 // ------------------------------------------------------------------------------------- home
 
-data class HomeData(val banners: List<Banner>, val categories: List<Category>, val brands: List<Brand>)
+data class HomeData(val banners: List<Banner>, val categories: List<Category>, val brands: List<Brand>, val deliveryCity: String? = null)
 
 @HiltViewModel
 class HomeViewModel @Inject constructor(private val api: ShopApi, val feed: ProductFeed) : LoadingViewModel<HomeData>() {
@@ -122,7 +126,8 @@ class HomeViewModel @Inject constructor(private val api: ShopApi, val feed: Prod
         val banners = async { runCatching { api.banners().items }.getOrDefault(emptyList()) }
         val categories = async { api.categories().items }
         val brands = async { runCatching { api.brands().items }.getOrDefault(emptyList()) }
-        HomeData(banners.await(), categories.await(), brands.await())
+        val city = async { runCatching { api.addresses().items.let { a -> (a.firstOrNull { it.isDefault } ?: a.firstOrNull())?.city } }.getOrNull() }
+        HomeData(banners.await(), categories.await(), brands.await(), city.await())
     }
 
     fun refreshAll() {
@@ -133,7 +138,16 @@ class HomeViewModel @Inject constructor(private val api: ShopApi, val feed: Prod
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun HomeScreen(onSearch: () -> Unit, onCategory: (Category) -> Unit, onBrand: (Brand) -> Unit, onProduct: (String) -> Unit, vm: HomeViewModel = hiltViewModel()) {
+fun HomeScreen(
+    onSearch: () -> Unit,
+    onCategory: (Category) -> Unit,
+    onBrand: (Brand) -> Unit,
+    onProduct: (String) -> Unit,
+    onShop: () -> Unit,
+    onOrders: () -> Unit,
+    onAddresses: () -> Unit,
+    vm: HomeViewModel = hiltViewModel(),
+) {
     val state by vm.state.collectAsStateWithLifecycle()
     val refreshing by vm.refreshing.collectAsStateWithLifecycle()
     val feed by vm.feed.state.collectAsStateWithLifecycle()
@@ -143,7 +157,7 @@ fun HomeScreen(onSearch: () -> Unit, onCategory: (Category) -> Unit, onBrand: (B
     Scaffold { padding ->
         when (val s = state) {
             Load.Loading -> Column(Modifier.fillMaxSize()) {
-                HomeHeader(onSearch, Modifier)
+                HomeHeader(onSearch, null, onAddresses, Modifier)
                 LoadingScreen()
             }
             is Load.Failed -> ErrorState(s.message) { vm.reload() }
@@ -156,8 +170,11 @@ fun HomeScreen(onSearch: () -> Unit, onCategory: (Category) -> Unit, onBrand: (B
                     verticalArrangement = Arrangement.spacedBy(12.dp),
                     modifier = Modifier.fillMaxSize(),
                 ) {
-                    item(span = { GridItemSpan(maxLineSpan) }) { HomeHeader(onSearch, Modifier.bleed(16.dp)) }
-                    item(span = { GridItemSpan(maxLineSpan) }) { TrustStrip() }
+                    item(span = { GridItemSpan(maxLineSpan) }) { HomeHeader(onSearch, s.data.deliveryCity, onAddresses, Modifier.bleed(16.dp)) }
+                    if (s.data.banners.isEmpty()) {
+                        item(span = { GridItemSpan(maxLineSpan) }) { PromoCard(onShop) }
+                    }
+                    item(span = { GridItemSpan(maxLineSpan) }) { QuickActions(onShop, onOrders) }
                     if (s.data.banners.isNotEmpty()) {
                         item(span = { GridItemSpan(maxLineSpan) }) {
                             BannerCarousel(s.data.banners) { b ->
@@ -202,20 +219,67 @@ private fun Modifier.bleed(side: androidx.compose.ui.unit.Dp) = layout { measura
     layout(placeable.width - extra, placeable.height) { placeable.place(-extra / 2, 0) }
 }
 
-/** Brand sweep with the logo, a promise line and the search bar. */
+/** The brand panel: logo, where orders are delivered, and the search bar. */
 @Composable
-private fun HomeHeader(onSearch: () -> Unit, modifier: Modifier) {
+private fun HomeHeader(onSearch: () -> Unit, city: String?, onAddresses: () -> Unit, modifier: Modifier) {
     Box(
         modifier.fillMaxWidth().background(BrandGradient, RoundedCornerShape(bottomStart = 28.dp, bottomEnd = 28.dp)),
     ) {
-        Column(Modifier.statusBarsPadding().padding(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Wordmark(color = Color.White, markSize = 30.dp)
-            Text(
-                "Mobile spare parts and accessories at wholesale prices, delivered to your shop.",
-                color = Color.White.copy(alpha = 0.9f),
-                style = MaterialTheme.typography.bodyMedium,
-            )
+        Column(Modifier.statusBarsPadding().padding(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 20.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+            Wordmark(onDark = true, markSize = 34.dp, textSize = 23.sp)
+            Surface(onClick = onAddresses, shape = RoundedCornerShape(14.dp), color = BrandColors.Yellow, modifier = Modifier.fillMaxWidth()) {
+                Row(Modifier.padding(horizontal = 14.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Outlined.LocationOn, contentDescription = null, tint = BrandColors.Ink, modifier = Modifier.size(20.dp))
+                    Column(Modifier.padding(start = 8.dp).weight(1f)) {
+                        Text("Delivering to", style = MaterialTheme.typography.labelSmall, color = BrandColors.Ink.copy(alpha = 0.7f))
+                        Text(city ?: "Add your shop address", style = MaterialTheme.typography.titleSmall, color = BrandColors.Ink, fontWeight = FontWeight.Bold)
+                    }
+                    Icon(Icons.Outlined.KeyboardArrowDown, contentDescription = "Change address", tint = BrandColors.Ink)
+                }
+            }
             SearchBarButton(onSearch)
+        }
+    }
+}
+
+/** The promise, when the admin has no banners running. */
+@Composable
+private fun PromoCard(onShop: () -> Unit) {
+    Surface(onClick = onShop, shape = RoundedCornerShape(22.dp), color = Color.Transparent, modifier = Modifier.fillMaxWidth().padding(top = 4.dp)) {
+        Box(Modifier.background(BrandGradient).padding(18.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Text("Mobile spare parts", style = MaterialTheme.typography.titleLarge, color = Color.White, fontWeight = FontWeight.ExtraBold)
+                    Text("at wholesale prices", style = MaterialTheme.typography.titleMedium, color = BrandColors.Yellow, fontStyle = androidx.compose.ui.text.font.FontStyle.Italic, fontWeight = FontWeight.Bold)
+                    Text("Tested parts · GST invoice · delivered to your shop", style = MaterialTheme.typography.bodySmall, color = Color.White.copy(alpha = 0.8f))
+                    Surface(shape = RoundedCornerShape(10.dp), color = BrandColors.Yellow, modifier = Modifier.padding(top = 6.dp)) {
+                        Text("Shop now", color = BrandColors.Ink, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 14.dp, vertical = 7.dp))
+                    }
+                }
+                Box(Modifier.size(88.dp).background(BrandColors.Yellow.copy(alpha = 0.16f), CircleShape), contentAlignment = Alignment.Center) {
+                    Icon(Icons.Outlined.DeliveryDining, contentDescription = null, tint = BrandColors.Yellow, modifier = Modifier.size(56.dp))
+                }
+            }
+        }
+    }
+}
+
+/** The three things a shop owner does most, one tap each. */
+@Composable
+private fun QuickActions(onShop: () -> Unit, onOrders: () -> Unit) {
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+        QuickTile(Icons.Outlined.Smartphone, "Spare parts\nshop", BrandColors.Yellow, BrandColors.Ink, Modifier.weight(1f), onShop)
+        QuickTile(Icons.Outlined.ReceiptLong, "My\norders", BrandColors.Ink, BrandColors.Yellow, Modifier.weight(1f), onOrders)
+        QuickTile(Icons.Outlined.LocalShipping, "Track\ndelivery", BrandColors.Green, Color.White, Modifier.weight(1f), onOrders)
+    }
+}
+
+@Composable
+private fun QuickTile(icon: ImageVector, label: String, bg: Color, ink: Color, modifier: Modifier, onClick: () -> Unit) {
+    Surface(onClick = onClick, shape = RoundedCornerShape(18.dp), color = bg, modifier = modifier.height(96.dp)) {
+        Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.SpaceBetween) {
+            Icon(icon, contentDescription = null, tint = ink, modifier = Modifier.size(28.dp))
+            Text(label, color = ink, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold, lineHeight = 16.sp)
         }
     }
 }
@@ -233,25 +297,6 @@ private fun SearchBarButton(onClick: () -> Unit) {
             Icon(Icons.Outlined.Search, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
             Spacer(Modifier.width(12.dp))
             Text(SEARCH_HINT, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        }
-    }
-}
-
-@Composable
-private fun TrustStrip(modifier: Modifier = Modifier) {
-    Row(modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        TrustItem(Icons.Outlined.Verified, "Tested parts", Modifier.weight(1f))
-        TrustItem(Icons.Outlined.ReceiptLong, "GST invoice", Modifier.weight(1f))
-        TrustItem(Icons.Outlined.LocalShipping, "Fast delivery", Modifier.weight(1f))
-    }
-}
-
-@Composable
-private fun TrustItem(icon: ImageVector, text: String, modifier: Modifier) {
-    Surface(modifier, shape = RoundedCornerShape(14.dp), color = MaterialTheme.colorScheme.surfaceContainerLow) {
-        Row(Modifier.padding(horizontal = 10.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            Icon(icon, null, tint = MaterialTheme.colorScheme.secondary, modifier = Modifier.size(18.dp))
-            Text(text, style = MaterialTheme.typography.labelMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
     }
 }

@@ -142,7 +142,7 @@ export class ReportsService {
     return toCsv(
       [
         'Order number', 'Placed at (IST)', 'Status', 'Retailer', 'City', 'PIN code', 'Wholesaler',
-        'Subtotal (₹)', 'Discount (₹)', 'Delivery fee (₹)', 'Total (₹)', 'Partpoint margin (₹)', 'Delivered at (IST)', 'Cancel reason',
+        'Subtotal (₹)', 'Discount (₹)', 'Delivery fee (₹)', 'Total (₹)', 'Margin (₹)', 'Delivered at (IST)', 'Cancel reason',
       ],
       rows.map((r) => [
         r.order_number,

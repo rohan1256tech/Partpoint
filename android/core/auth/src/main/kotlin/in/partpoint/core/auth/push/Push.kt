@@ -73,7 +73,7 @@ object PushSetup {
         )
         nm.createNotificationChannel(
             NotificationChannel(CHANNEL_GENERAL, "Account and announcements", NotificationManager.IMPORTANCE_DEFAULT).apply {
-                description = "Account approval and messages from Partpoint"
+                description = "Account approval and messages from Sakshay Connect"
             },
         )
     }

@@ -74,6 +74,20 @@ data class Job(
     val isOffer get() = status == "assigned" && !deliveryAccepted
 }
 
+/** A packed order no rider has taken yet (backend OpenJob): areas only until it is taken. */
+@Serializable data class JobArea(val businessName: String? = null, val city: String, val pincode: String)
+@Serializable
+data class OpenJob(
+    val id: String,
+    val orderNumber: String,
+    val itemCount: Int,
+    val pickup: JobArea,
+    val drop: JobArea,
+    val earningPaise: Long = 0,
+    val readySince: String,
+)
+@Serializable data class OpenJobs(val items: List<OpenJob>)
+
 @Serializable data class Availability(val isAvailable: Boolean)
 @Serializable data class OtpBody(val otp: String)
 @Serializable data class DeclineBody(val reason: String? = null)
@@ -98,6 +112,10 @@ data class Earnings(
 interface DeliveryApi {
     @GET("v1/me") suspend fun me(): RiderMe
     @PATCH("v1/delivery/availability") suspend fun setAvailability(@Body body: Availability): Availability
+
+    /** Packed orders offered to every available rider; the first to take one gets it. */
+    @GET("v1/delivery/jobs") suspend fun openJobs(): OpenJobs
+    @POST("v1/delivery/jobs/{id}/take") suspend fun take(@Path("id") id: String): Job
 
     @GET("v1/delivery/orders") suspend fun jobs(@Query("scope") scope: String? = null, @Query("cursor") cursor: String? = null, @Query("limit") limit: Int = 50): Page<JobSummary>
     @GET("v1/delivery/orders/{id}") suspend fun job(@Path("id") id: String): Job

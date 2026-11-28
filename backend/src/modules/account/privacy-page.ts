@@ -26,7 +26,7 @@ export function privacyPage(o: PrivacyPageOptions): string {
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Privacy policy · Partpoint</title>
+<title>Privacy policy · Sakshay Connect</title>
 <style>
   :root { color-scheme: light dark; --fg: #1a1a1a; --muted: #4d4d4d; --bg: #fff; --line: #e3e3e3; --link: #1f6fd1; }
   @media (prefers-color-scheme: dark) { :root { --fg: #ececec; --muted: #b5b5b5; --bg: #141414; --line: #2e2e2e; --link: #8db8f2; } }
@@ -49,11 +49,11 @@ export function privacyPage(o: PrivacyPageOptions): string {
 <body>
 <main>
   <h1>Privacy policy</h1>
-  <p class="meta">For the <strong>Partpoint</strong> and <strong>Partpoint Delivery</strong> Android apps and the services behind them.
+  <p class="meta">For the <strong>Sakshay Connect</strong> and <strong>Sakshay Connect Delivery</strong> Android apps and the services behind them.
      Version ${version}.</p>
 
-  <p>Partpoint is a business-to-business marketplace for mobile phone spare parts and accessories. Retailers
-     order from Partpoint's catalog, Partpoint passes each order to a wholesaler that has the stock, and delivery
+  <p>Sakshay Connect is a business-to-business marketplace for mobile phone spare parts and accessories. Retailers
+     order from Sakshay Connect's catalog, Sakshay Connect passes each order to a wholesaler that has the stock, and delivery
      partners take the goods from the wholesaler to the retailer. This policy explains what
      personal data we collect, why, who sees it, how long we keep it, and your rights under India's
      Digital Personal Data Protection Act, 2023.</p>
@@ -77,7 +77,7 @@ export function privacyPage(o: PrivacyPageOptions): string {
   <ul>
     <li><strong>The other people in an order</strong>, only as much as they need: the wholesaler fulfilling it sees the retailer's shop name and delivery area (city and PIN code), and its business details appear on the GST invoice the retailer receives;
         the delivery partner sees the pickup and delivery addresses and phone numbers; the retailer sees the delivery partner's name and phone number.</li>
-    <li><strong>Partpoint staff</strong> who approve accounts, handle orders and support. Admin access requires two-factor authentication and is logged.</li>
+    <li><strong>Sakshay Connect staff</strong> who approve accounts, handle orders and support. Admin access requires two-factor authentication and is logged.</li>
     <li><strong>Service providers</strong> that run parts of the service for us under contract, only for that purpose:
         our server host, Cloudflare (network security and image storage), an SMS provider (sign-in codes), an email provider (codes and account emails),
         and Google Firebase Cloud Messaging (notifications).</li>
@@ -110,7 +110,7 @@ export function privacyPage(o: PrivacyPageOptions): string {
   <p>We aim to answer every request within 30 days.</p>
 
   <h2>Age</h2>
-  <p>Partpoint is for businesses and their staff. You must be 18 or older to use it.</p>
+  <p>Sakshay Connect is for businesses and their staff. You must be 18 or older to use it.</p>
 
   <h2>Changes</h2>
   <p>If we change this policy in a way that matters, we will tell you in the app and ask for your consent again where the law requires it.

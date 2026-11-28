@@ -187,7 +187,7 @@ fun ProfileScreen(me: Me) {
                 }
             }
             Text(
-                "Your phone number is shared with the seller and the retailer of each order you deliver, so they can reach you. Partpoint does not track your location.",
+                "Your phone number is shared with the wholesaler and the retailer of each order you deliver, so they can reach you. Sakshay Connect does not track your location.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )

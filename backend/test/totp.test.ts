@@ -35,7 +35,7 @@ describe('TOTP', () => {
     expect(base32Encode(Buffer.from('foobar'))).toBe('MZXW6YTBOI'); // RFC 4648
     expect(base32Decode('MZXW6YTBOI').toString()).toBe('foobar');
     expect(otpauthUri(SEED, 'ops@example.in')).toBe(
-      'otpauth://totp/Partpoint%20Admin%3Aops%40example.in?secret=GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ&issuer=Partpoint+Admin&algorithm=SHA1&digits=6&period=30',
+      'otpauth://totp/Sakshay%20Connect%20Admin%3Aops%40example.in?secret=GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ&issuer=Sakshay+Connect+Admin&algorithm=SHA1&digits=6&period=30',
     );
   });
 

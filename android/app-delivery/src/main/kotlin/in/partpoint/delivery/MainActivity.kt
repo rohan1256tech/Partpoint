@@ -78,7 +78,7 @@ class MainActivity : ComponentActivity() {
 private fun Root(vm: SessionViewModel = hiltViewModel()) {
     val session by vm.session.collectAsStateWithLifecycle()
     when (val s = session) {
-        Session.Loading -> LoadingScreen()
+        Session.Loading -> `in`.partpoint.core.ui.BrandSplash("Deliver orders. Earn on every drop.")
         is Session.SignedOut -> SignedOutFlow(s.notice)
         is Session.Active -> if (s.me.isApproved) RiderApp(s.me) else PendingApprovalScreen(s.me)
     }
@@ -92,8 +92,8 @@ private fun SignedOutFlow(notice: String?) {
             Column {
                 SignedOutNotice(notice)
                 LoginScreen(
-                    appTitle = "Partpoint Delivery",
-                    tagline = "Deliver Partpoint orders of mobile parts and accessories to shops near you.",
+                    appTitle = "Sakshay Connect Delivery",
+                    tagline = "Deliver mobile parts and accessories to shops near you, and earn on every drop.",
                     onNeedsSignup = { phone, token -> nav.navigate(Signup(phone, token)) { launchSingleTop = true } },
                 )
             }
@@ -130,7 +130,7 @@ private fun RiderSignupScreen(phone: String, token: String, onBack: () -> Unit, 
             "Your phone number is shared with the shop and the wholesaler of each order you deliver, so they can reach you.",
             style = MaterialTheme.typography.bodySmall,
         )
-        ConsentText(prefix = "By joining you agree to the Partpoint ")
+        ConsentText(prefix = "By joining you agree to the Sakshay Connect ")
         ErrorText(error)
         PrimaryButton("Join", enabled = name.isNotBlank(), loading = busy, onClick = {
             scope.launch {

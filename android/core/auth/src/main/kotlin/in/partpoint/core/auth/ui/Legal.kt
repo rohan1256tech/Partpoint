@@ -24,9 +24,9 @@ class LegalViewModel @Inject constructor(config: ApiConfig) : ViewModel() {
     val privacyUrl: String = config.baseUrl.trimEnd('/') + "/privacy"
 }
 
-/** "I agree to the Partpoint privacy policy" with the policy as a real, tappable link. */
+/** "I agree to the Sakshay Connect privacy policy" with the policy as a real, tappable link. */
 @Composable
-fun ConsentText(prefix: String = "I agree to the Partpoint ", vm: LegalViewModel = hiltViewModel()) {
+fun ConsentText(prefix: String = "I agree to the Sakshay Connect ", vm: LegalViewModel = hiltViewModel()) {
     val linkStyle = TextLinkStyles(SpanStyle(color = MaterialTheme.colorScheme.primary, textDecoration = TextDecoration.Underline))
     Text(
         buildAnnotatedString {

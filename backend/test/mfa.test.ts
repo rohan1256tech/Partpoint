@@ -71,7 +71,7 @@ describe('admin two-factor authentication', () => {
 
     const setup = (await call('POST', '/v1/admin/2fa/setup', token)).json();
     expect(setup.secret).toMatch(/^[A-Z2-7]{32}$/);
-    expect(setup.otpauthUri).toMatch(/^otpauth:\/\/totp\/Partpoint%20Admin%3Aops%40partpoint\.test\?secret=/);
+    expect(setup.otpauthUri).toMatch(/^otpauth:\/\/totp\/Sakshay%20Connect%20Admin%3Aops%40partpoint\.test\?secret=/);
 
     const secret = base32Decode(setup.secret);
     const wrong = hotp(secret, timeStep() + 10);

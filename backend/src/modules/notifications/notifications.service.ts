@@ -1,7 +1,7 @@
-import { and, eq, inArray } from 'drizzle-orm';
+import { and, eq, inArray, isNull, ne } from 'drizzle-orm';
 import type { FastifyBaseLogger } from 'fastify';
 import type { Database } from '../../db/index.js';
-import { orders, pushTokens } from '../../db/schema.js';
+import { deliveryProfiles, orders, pushTokens, users, wholesalerProfiles } from '../../db/schema.js';
 import type { PushMessage, PushSender } from '../../lib/push.js';
 
 type OrderStatus = (typeof orders.$inferSelect)['status'];
@@ -82,6 +82,40 @@ export class NotificationService {
             data: { type: 'order', orderId, status: 'reassigned' },
           });
         }
+      })(),
+    );
+  }
+
+  /**
+   * Fire-and-forget: offers a packed order to every available rider ("Order ready for pickup").
+   * The first to take it in the app gets it. [except] = a rider who just gave it back.
+   */
+  offerJob(orderId: string, except?: string): void {
+    this.track(
+      (async () => {
+        const [o] = await this.db
+          .select({ orderNumber: orders.orderNumber, city: wholesalerProfiles.city })
+          .from(orders)
+          .innerJoin(wholesalerProfiles, eq(wholesalerProfiles.userId, orders.wholesalerId))
+          .where(eq(orders.id, orderId));
+        if (!o) return;
+        const riders = await this.db
+          .select({ id: users.id })
+          .from(users)
+          .innerJoin(deliveryProfiles, eq(deliveryProfiles.userId, users.id))
+          .where(
+            and(
+              eq(users.role, 'delivery'),
+              eq(users.status, 'approved'),
+              isNull(users.deletedAt),
+              eq(deliveryProfiles.isAvailable, true),
+              except ? ne(users.id, except) : undefined,
+            ),
+          );
+        await this.deliver(
+          riders.map((r) => r.id),
+          { title: 'Order ready for pickup', body: `${o.orderNumber}: pick up in ${o.city}. Tap to take it.`, data: { type: 'job', orderId } },
+        );
       })(),
     );
   }

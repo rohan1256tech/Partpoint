@@ -23,8 +23,8 @@ export function ProductStatusBadge({ status }: { status: ProductStatus }) {
 }
 
 /**
- * Partpoint's catalog. The admin creates products and sets what retailers pay; wholesalers add
- * their stock and supply price to each variant from the Partpoint app.
+ * Sakshay Connect's catalog. The admin creates products and sets what retailers pay; wholesalers add
+ * their stock and supply price to each variant from the Sakshay Connect app.
  */
 export function ProductsPage() {
   const [params, setParams] = useSearchParams();
@@ -122,7 +122,7 @@ export function ProductsPage() {
         <Loader />
       ) : products.length === 0 ? (
         <EmptyState icon={IconPackage} title="No products match">
-          Create products with “New product”; wholesalers then add their stock in the Partpoint app.
+          Create products with “New product”; wholesalers then add their stock in the Sakshay Connect app.
         </EmptyState>
       ) : (
         <Table highlightOnHover verticalSpacing="xs">

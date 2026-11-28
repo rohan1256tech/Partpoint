@@ -1,6 +1,7 @@
 import { and, desc, eq, gte, isNull, sql, sum } from 'drizzle-orm';
 import type { Database } from '../../db/index.js';
-import { deliveryEarnings, deliveryProfiles, orderEvents, orders, users } from '../../db/schema.js';
+import { deliveryEarnings, deliveryProfiles, orderEvents, orders, users, wholesalerProfiles } from '../../db/schema.js';
+import type { AddressSnapshot } from '../addresses/addresses.js';
 import { audit } from '../../lib/audit.js';
 import { istBoundaries } from '../../lib/time.js';
 import { AppError, badRequest, conflict, notFound, tooManyRequests } from '../../lib/errors.js';
@@ -19,6 +20,20 @@ export interface PartnerSummary {
   vehicleNumber: string | null;
   isAvailable: boolean;
   activeDeliveries: number;
+}
+
+/**
+ * A packed order no rider has taken yet, as offered to every available rider. Only areas are
+ * shown until a rider takes the job; then the full addresses and phones appear in the job.
+ */
+export interface OpenJob {
+  id: string;
+  orderNumber: string;
+  itemCount: number;
+  pickup: { businessName: string; city: string; pincode: string };
+  drop: { city: string; pincode: string };
+  earningPaise: number;
+  readySince: string;
 }
 
 export interface EarningsSummary {
@@ -70,6 +85,63 @@ export class DeliveryService {
   async setAvailability(partnerId: string, isAvailable: boolean): Promise<{ isAvailable: boolean }> {
     await this.db.update(deliveryProfiles).set({ isAvailable }).where(eq(deliveryProfiles.userId, partnerId));
     return { isAvailable };
+  }
+
+  // ================================================================ open jobs (Zomato-style)
+
+  /** Packed orders without a rider, oldest first. Every approved rider sees the same list. */
+  async openJobs(): Promise<OpenJob[]> {
+    const { deliveryEarningPaise } = await this.settings.get();
+    const rows = await this.db
+      .select({
+        id: orders.id,
+        orderNumber: orders.orderNumber,
+        address: orders.addressSnapshot,
+        updatedAt: orders.updatedAt,
+        businessName: wholesalerProfiles.businessName,
+        city: wholesalerProfiles.city,
+        pincode: wholesalerProfiles.pincode,
+        itemCount: sql<number>`(SELECT count(*)::int FROM order_items oi WHERE oi.order_id = ${orders.id})`,
+      })
+      .from(orders)
+      .innerJoin(wholesalerProfiles, eq(wholesalerProfiles.userId, orders.wholesalerId))
+      .where(and(eq(orders.status, 'packed'), isNull(orders.deliveryPartnerId)))
+      .orderBy(orders.updatedAt)
+      .limit(50);
+    return rows.map((r) => {
+      const a = r.address as AddressSnapshot;
+      return {
+        id: r.id,
+        orderNumber: r.orderNumber,
+        itemCount: r.itemCount,
+        pickup: { businessName: r.businessName, city: r.city, pincode: r.pincode },
+        drop: { city: a.city, pincode: a.pincode },
+        earningPaise: deliveryEarningPaise,
+        readySince: r.updatedAt.toISOString(),
+      };
+    });
+  }
+
+  /**
+   * A rider takes an open job. First come, first served: the conditional update lets exactly
+   * one rider win, everyone else gets JOB_TAKEN.
+   */
+  async claim(partnerId: string, orderId: string): Promise<void> {
+    await this.db.transaction(async (tx) => {
+      const [rider] = await tx
+        .select({ name: users.name, isAvailable: deliveryProfiles.isAvailable })
+        .from(users)
+        .innerJoin(deliveryProfiles, eq(deliveryProfiles.userId, users.id))
+        .where(eq(users.id, partnerId));
+      if (!rider?.isAvailable) throw badRequest('PARTNER_UNAVAILABLE', 'Go online to take jobs');
+      const taken = await tx
+        .update(orders)
+        .set({ status: 'assigned', deliveryPartnerId: partnerId, deliveryAcceptedAt: new Date(), deliveryOtpAttempts: 0 })
+        .where(and(eq(orders.id, orderId), eq(orders.status, 'packed'), isNull(orders.deliveryPartnerId)))
+        .returning({ id: orders.id });
+      if (taken.length === 0) throw conflict('JOB_TAKEN', 'Another delivery partner has already taken this order');
+      await tx.insert(orderEvents).values({ orderId, status: 'assigned', actorId: partnerId, note: `Taken by ${rider.name}` });
+    });
   }
 
   // ================================================================ assignment (admin)
@@ -129,7 +201,7 @@ export class DeliveryService {
   async respond(partnerId: string, orderId: string, accept: boolean, reason: string | null): Promise<void> {
     await this.db.transaction(async (tx) => {
       const o = await this.lockOrder(tx, orderId, partnerId);
-      if (o.status !== 'assigned' || o.deliveryAcceptedAt) {
+      if (o.status !== 'assigned' || (accept && o.deliveryAcceptedAt)) {
         throw conflict('INVALID_STATUS_TRANSITION', 'This delivery has already been responded to');
       }
       if (accept) {
@@ -138,7 +210,7 @@ export class DeliveryService {
           .insert(orderEvents)
           .values({ orderId, status: 'assigned', actorId: partnerId, note: 'Accepted by delivery partner' });
       } else {
-        // Back to the admin's queue for someone else.
+        // Back to the open jobs, offered to every available rider again.
         await tx.update(orders).set({ status: 'packed', deliveryPartnerId: null }).where(eq(orders.id, orderId));
         await tx.insert(orderEvents).values({
           orderId,
@@ -148,6 +220,7 @@ export class DeliveryService {
         });
       }
     });
+    if (!accept) this.notifications.offerJob(orderId, partnerId);
   }
 
   async advance(partnerId: string, orderId: string, to: 'picked_up' | 'out_for_delivery'): Promise<void> {

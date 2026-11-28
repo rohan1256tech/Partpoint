@@ -177,8 +177,8 @@ fun StatusPill(text: String, color: Color, modifier: Modifier = Modifier) {
 
 /** Order status → colour, shared by both apps. */
 fun orderStatusColor(status: String): Color = when (status) {
-    "placed" -> Color(0xFF4338CA)
-    "forwarded" -> Color(0xFF4338CA)
+    "placed" -> Color(0xFFB7791F)
+    "forwarded" -> Color(0xFFB7791F)
     "accepted" -> Color(0xFF0E7490)
     "packed" -> Color(0xFF6D28D9)
     "assigned", "picked_up", "out_for_delivery" -> Color(0xFFC2410C)

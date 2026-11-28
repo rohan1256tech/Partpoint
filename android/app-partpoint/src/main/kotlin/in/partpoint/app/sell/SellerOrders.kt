@@ -237,7 +237,7 @@ class SellerOrderViewModel @Inject constructor(
 
     fun accept(onError: (String) -> Unit) = act(onError) { api.accept(id) }
     fun pack(onError: (String) -> Unit) = act(onError) { api.pack(id) }
-    /** The order goes back to Partpoint (and out of this wholesaler's list), so the screen closes. */
+    /** The order goes back to Sakshay Connect (and out of this wholesaler's list), so the screen closes. */
     fun handBack(reason: String, onDone: () -> Unit, onError: (String) -> Unit) = viewModelScope.launch {
         _busy.value = true
         try {
@@ -334,11 +334,11 @@ fun SellerOrderScreen(onBack: () -> Unit, vm: SellerOrderViewModel = hiltViewMod
                     }
                     HorizontalDivider()
                     MoneyRow("You receive", o.supplyTotalPaise ?: (o.subtotalPaise - o.discountPaise), bold = true)
-                    Text("At your supply prices when Partpoint sent you the order. Partpoint arranges the delivery.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text("At your supply prices when Sakshay Connect sent you the order. Sakshay Connect arranges the delivery.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
 
                     Column {
                         Text("Deliver to", style = MaterialTheme.typography.titleSmall)
-                        // Sellers get only the delivery area; Partpoint's rider has the full address.
+                        // Sellers get only the delivery area; Sakshay Connect's rider has the full address.
                         Text(listOfNotNull(o.retailer?.shopName, "${o.address.city} ${o.address.pincode}").joinToString(", "), style = MaterialTheme.typography.bodyMedium)
                     }
 
@@ -383,7 +383,7 @@ fun SellerOrderScreen(onBack: () -> Unit, vm: SellerOrderViewModel = hiltViewMod
             title = { Text("Hand this order back?") },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("Partpoint will send it to another wholesaler, and your stock for these items is restored. Tell us why so we can fix your stock list.")
+                    Text("Sakshay Connect will send it to another wholesaler, and your stock for these items is restored. Tell us why so we can fix your stock list.")
                     OutlinedTextField(reason, { reason = it.take(300) }, label = { Text("Reason, e.g. stock damaged") })
                 }
             },
@@ -402,9 +402,9 @@ fun SellerOrderScreen(onBack: () -> Unit, vm: SellerOrderViewModel = hiltViewMod
 @Composable
 private fun NextStep(o: OrderDetail) {
     val text = when (o.status) {
-        "forwarded" -> "Partpoint chose your stock for this order. Check you have every item, then accept."
+        "forwarded" -> "Sakshay Connect chose your stock for this order. Check you have every item, then accept."
         "accepted" -> "Pack the items and mark the order packed. The GST invoice is created at that moment."
-        "packed" -> "Packed. Partpoint is assigning a delivery partner to pick it up."
+        "packed" -> "Packed. Sakshay Connect is assigning a delivery partner to pick it up."
         "assigned" -> "A delivery partner is coming to pick this up. Keep the parcel and invoice ready."
         "picked_up", "out_for_delivery" -> "Picked up and on its way to the retailer."
         "delivered" -> "Delivered. The amount is added to your earnings."

@@ -31,7 +31,7 @@ export function DeliveryPartnersPage() {
         ]}
       />
       <Text size="sm" c="dimmed">
-        Riders switch availability in the Partpoint Delivery app. New riders appear here once approved under Users.
+        Riders switch availability in the Sakshay Connect Delivery app. New riders appear here once approved under Users.
       </Text>
       {error && <Alert color="red">{errorMessage(error)}</Alert>}
       {isLoading ? (
@@ -39,8 +39,8 @@ export function DeliveryPartnersPage() {
       ) : partners.length === 0 ? (
         <EmptyState icon={IconTruckDelivery} title={filter === 'available' ? 'No riders available right now' : 'No approved riders yet'}>
           {filter === 'available'
-            ? 'Riders appear here when they switch to available in the Partpoint Delivery app.'
-            : 'Riders sign up in the Partpoint Delivery app; approve them under Users.'}
+            ? 'Riders appear here when they switch to available in the Sakshay Connect Delivery app.'
+            : 'Riders sign up in the Sakshay Connect Delivery app; approve them under Users.'}
         </EmptyState>
       ) : (
         <Table>

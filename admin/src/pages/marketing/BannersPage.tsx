@@ -20,7 +20,7 @@ type Draft = Omit<Banner, 'id' | 'imageKey' | 'startsAt' | 'endsAt'> & {
 };
 const EMPTY: Draft = { title: '', imageKey: null, imageUrl: '', linkType: 'none', linkValue: null, sortOrder: 0, isActive: true, startsAt: null, endsAt: null };
 
-/** Home-screen banners in the Partpoint app, in display order. */
+/** Home-screen banners in the Sakshay Connect app, in display order. */
 export function BannersPage() {
   const [draft, setDraft] = useState<Draft | null>(null);
   const banners = useQuery({ queryKey: ['banners'], queryFn: () => api.get<{ items: Banner[] }>('/v1/admin/banners') });
@@ -71,7 +71,7 @@ export function BannersPage() {
       {banners.isLoading ? (
         <Loader />
       ) : (banners.data?.items ?? []).length === 0 ? (
-        <EmptyState icon={IconPhoto} title="No banners yet">Banners appear at the top of the Partpoint home screen. Use them for offers or new brands.</EmptyState>
+        <EmptyState icon={IconPhoto} title="No banners yet">Banners appear at the top of the Sakshay Connect home screen. Use them for offers or new brands.</EmptyState>
       ) : (
         <SimpleGrid cols={{ base: 1, sm: 2, lg: 3 }}>
           {(banners.data?.items ?? []).map((b) => (

@@ -42,10 +42,16 @@ async function call(method: string, path: string, token?: string, body?: object,
 }
 
 async function phoneLogin(phone: string, app: 'partpoint' | 'delivery') {
-  // A recent run leaves a resend cooldown; the earlier code is still valid then.
-  await call('POST', '/v1/auth/otp/request', undefined, { phone }, 202).catch((e: Error) => {
-    if (!e.message.includes('OTP_COOLDOWN')) throw e;
-  });
+  // Codes are single use and new ones have a 30 s resend cooldown: a run right after another waits it out.
+  for (let attempt = 0; ; attempt++) {
+    try {
+      await call('POST', '/v1/auth/otp/request', undefined, { phone }, 202);
+      break;
+    } catch (e) {
+      if (!(e as Error).message.includes('OTP_COOLDOWN') || attempt > 0) throw e;
+      await new Promise((resolve) => setTimeout(resolve, 31_000));
+    }
+  }
   const r = await call('POST', '/v1/auth/otp/verify', undefined, { phone, code: OTP, app, deviceId: `flow-check-${phone}` });
   return { token: r.tokens.accessToken as string, id: r.user.id as string };
 }
@@ -79,6 +85,7 @@ try {
   const retailer = await phoneLogin('+919000000203', 'partpoint'); // New India Mobile Point, Mumbai
   const nashik = await phoneLogin('+919000000102', 'partpoint'); // Nashik
   const lamington = await phoneLogin('+919000000103', 'partpoint'); // Mumbai
+  const shreeSai = await phoneLogin('+919000000101', 'partpoint'); // Pune
   const rider = await phoneLogin('+919000000301', 'delivery');
   ok(true, 'everyone signs in (admin with 2FA, others with the demo OTP)');
 
@@ -99,12 +106,15 @@ try {
   const displayLine = cart.lines.find((l: Json) => l.variantId === withFrame.id);
   ok(cart.lines.length === 2 && cart.groups === undefined, 'cart is one Partpoint list');
   ok(displayLine.unitPricePaise === 172_000, 'bulk price applies at 5 pieces (₹1,720)');
-  const preview = await call('GET', '/v1/cart?couponCode=WELCOME10', retailer.token);
-  ok(preview.coupon?.discountPaise === 20_000, 'WELCOME10 gives 10% capped at ₹200');
+  // A fresh coupon each run, so a retailer who used one before does not fail the check.
+  const code = `FLOW${Date.now() % 1_000_000}`;
+  await call('POST', '/v1/admin/coupons', adminTok, { code, discountType: 'percent', discountValue: 1000, maxDiscountPaise: 20_000, minOrderPaise: 50_000, perUserLimit: 1, isActive: true }, 201);
+  const preview = await call('GET', `/v1/cart?couponCode=${code}`, retailer.token);
+  ok(preview.coupon?.discountPaise === 20_000, 'a 10% coupon is capped at ₹200');
 
   const addresses = await call('GET', '/v1/me/addresses', retailer.token);
-  const placed = await call('POST', '/v1/orders', retailer.token, { addressId: addresses.items[0].id, idempotencyKey: `flow-${Date.now()}`, couponCode: 'WELCOME10' }, 201);
-  ok(placed.orders.length === 1 && placed.totalPaise === preview.totalPaise, `one order placed: ${placed.orders[0].orderNumber}, ${placed.totalPaise / 100} rupees`);
+  const placed = await call('POST', '/v1/orders', retailer.token, { addressId: addresses.items[0].id, idempotencyKey: `flow-${Date.now()}`, couponCode: code }, 201);
+  ok(placed.orders.length === 1 && placed.totalPaise === preview.totalPaise && /^SC-/.test(placed.orders[0].orderNumber), `one order placed: ${placed.orders[0].orderNumber}, ${placed.totalPaise / 100} rupees`);
   const orderId = placed.orders[0].id as string;
   const mine0 = await call('GET', `/v1/orders/${orderId}`, retailer.token);
   ok(mine0.status === 'placed' && mine0.wholesaler === null, 'retailer sees "placed", no wholesaler');
@@ -119,9 +129,12 @@ try {
   const sItem = options.items.find((i: Json) => i.productName.startsWith('Loudspeaker'));
   ok(dItem.offers.some((o: Json) => o.wholesalerId === lamington.id) && sItem.offers.every((o: Json) => o.wholesalerId === nashik.id), 'options list who stocks each item');
 
+  // Whoever still has enough display stock (repeated runs use stock up, as real orders would).
+  const displayFrom = [lamington, shreeSai].find((w) => dItem.offers.some((o: Json) => o.wholesalerId === w.id && o.stockQty >= dItem.qty));
+  if (!displayFrom) throw new Error('no wholesaler has enough display stock left: top it up in the wholesaler app');
   const fwd = await call('POST', `/v1/admin/orders/${orderId}/forward`, adminTok, {
     assignments: [
-      { itemId: dItem.id, wholesalerId: lamington.id },
+      { itemId: dItem.id, wholesalerId: displayFrom.id },
       { itemId: sItem.id, wholesalerId: nashik.id },
     ],
   });
@@ -146,7 +159,7 @@ try {
   await call('POST', `/v1/admin/orders/${part2Id}/forward`, adminTok, { wholesalerId: nashik.id });
 
   for (const [id, w] of [
-    [orderId, lamington],
+    [orderId, displayFrom],
     [part2Id, nashik],
   ] as const) {
     await call('POST', `/v1/wholesaler/orders/${id}/accept`, w.token);
@@ -160,8 +173,10 @@ try {
   // ---------------------------------------------------------------- rider
   const earnBefore = (await call('GET', '/v1/delivery/earnings', rider.token)).totals ?? null;
   for (const id of [orderId, part2Id]) {
-    await call('POST', `/v1/admin/orders/${id}/assign`, adminTok, { deliveryPartnerId: rider.id });
-    await call('POST', `/v1/delivery/orders/${id}/accept`, rider.token);
+    // Zomato-style: the packed order is offered to every available rider; this one takes it.
+    await call('PATCH', '/v1/delivery/availability', rider.token, { isAvailable: true });
+    ok((await call('GET', '/v1/delivery/jobs', rider.token)).items.some((j: Json) => j.id === id), 'the packed order is offered to riders as an open job');
+    await call('POST', `/v1/delivery/jobs/${id}/take`, rider.token);
     const job = await call('GET', `/v1/delivery/orders/${id}`, rider.token);
     ok(!!job.pickup?.addressLine && !!job.address?.line1, `rider sees pickup and drop addresses for ${job.orderNumber}`);
     await call('POST', `/v1/delivery/orders/${id}/pickup`, rider.token);
@@ -176,9 +191,9 @@ try {
 
   // ---------------------------------------------------------------- money
   const balances = await call('GET', '/v1/admin/finance/wholesalers', adminTok);
-  const lam = balances.items.find((b: Json) => b.wholesalerId === lamington.id);
+  const lam = balances.items.find((b: Json) => b.wholesalerId === displayFrom.id);
   ok(lam.owedPaise === lam.goodsPaise - lam.commissionPaise, 'wholesaler owed = goods − Partpoint margin = supply value');
-  const myFinance = await call('GET', '/v1/wholesaler/finance', lamington.token);
+  const myFinance = await call('GET', '/v1/wholesaler/finance', displayFrom.token);
   ok(myFinance.balance.owedPaise === lam.owedPaise, 'the wholesaler app shows the same balance as the admin');
   const dash = await call('GET', '/v1/admin/dashboard', adminTok);
   ok(typeof dash.sales.commissionThisMonthPaise === 'number', `dashboard margin this month: ${dash.sales.commissionThisMonthPaise / 100} rupees`);

@@ -92,7 +92,7 @@ describe('OrderDrawer', () => {
     expect(screen.getByText('Assign a rider')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /cancel order/i })).toBeDisabled(); // until a reason is typed
     expect(screen.getByRole('button', { name: /gst invoice/i })).toBeInTheDocument();
-    expect(screen.getByText('₹50.00')).toBeInTheDocument(); // Partpoint margin
+    expect(screen.getByText('₹50.00')).toBeInTheDocument(); // Margin
     expect(screen.queryByText(/choose who fulfils/i)).not.toBeInTheDocument();
   });
 

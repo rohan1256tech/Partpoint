@@ -111,6 +111,9 @@ fun RetailerApp(me: Me, shell: RetailerShellViewModel = hiltViewModel()) {
                     onCategory = { nav.navigate(Products(it.name, categoryId = it.id)) },
                     onBrand = { nav.navigate(Products(it.name, brandId = it.id)) },
                     onProduct = openProduct,
+                    onShop = { nav.switchTab(CategoriesTab) },
+                    onOrders = { nav.switchTab(OrdersTab) },
+                    onAddresses = { nav.navigate(Addresses) },
                 )
             }
             composable<CategoriesTab> { CategoriesScreen(onCategory = { nav.navigate(Products(it.name, categoryId = it.id)) }) }

@@ -31,9 +31,15 @@ import androidx.compose.ui.unit.dp
 /** Full-width primary action with a built-in loading state (no double taps while busy). */
 @Composable
 fun PrimaryButton(text: String, onClick: () -> Unit, modifier: Modifier = Modifier, enabled: Boolean = true, loading: Boolean = false) {
-    Button(onClick = onClick, enabled = enabled && !loading, modifier = modifier.fillMaxWidth().heightIn(min = 52.dp)) {
+    // The brand call to action: yellow with black text, in light and dark mode alike.
+    Button(
+        onClick = onClick,
+        enabled = enabled && !loading,
+        colors = androidx.compose.material3.ButtonDefaults.buttonColors(containerColor = BrandColors.Yellow, contentColor = BrandColors.Ink),
+        modifier = modifier.fillMaxWidth().heightIn(min = 52.dp),
+    ) {
         if (loading) {
-            CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp, color = MaterialTheme.colorScheme.onPrimary)
+            CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp, color = BrandColors.Ink)
         } else {
             Text(text)
         }

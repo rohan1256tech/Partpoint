@@ -98,7 +98,7 @@ export function AnnouncementsPage() {
                 P
               </Badge>
               <Text size="xs" c="dimmed">
-                {audience === 'delivery' ? 'Partpoint Delivery' : 'Partpoint'} · now
+                {audience === 'delivery' ? 'Sakshay Connect Delivery' : 'Sakshay Connect'} · now
               </Text>
             </Group>
             <Text size="sm" fw={600} lineClamp={1}>

@@ -1,17 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Partpoint mark: phone outline with a docking point, on the indigo-violet brand sweep (same shapes as core:ui BrandMark). -->
+<!-- Sakshay Connect: the yellow swoosh S under a phone outline on black, after the client's logo (same shapes as core:ui BrandMark). -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:aapt="http://schemas.android.com/aapt"
     android:width="108dp" android:height="108dp" android:viewportWidth="108" android:viewportHeight="108">
-    <path android:pathData="M0,0h108v108h-108z">
-        <aapt:attr name="android:fillColor">
-            <gradient android:type="linear" android:startX="0" android:startY="0" android:endX="108" android:endY="108"
-                android:startColor="#FF4338CA" android:endColor="#FF7C3AED" />
-        </aapt:attr>
-    </path>
-    <path android:strokeColor="#FFFFFFFF" android:strokeWidth="5.4" android:fillColor="#00000000"
-        android:pathData="M41.1,33.1h15.8a5.8,5.8 0,0 1,5.8 5.8v30.2a5.8,5.8 0,0 1,-5.8 5.8h-15.8a5.8,5.8 0,0 1,-5.8 -5.8v-30.2a5.8,5.8 0,0 1,5.8 -5.8z" />
-    <path android:strokeColor="#FFFFFFFF" android:strokeWidth="3.6" android:strokeLineCap="round" android:pathData="M45.2,39.4H52.8" />
-    <path android:fillColor="#FFFFFFFF" android:pathData="M57.6,60.7a9.4,9.4 0,1 0,18.8 0a9.4,9.4 0,1 0,-18.8 0z" />
-    <path android:fillColor="#FFF59E0B" android:pathData="M62.7,60.7a4.3,4.3 0,1 0,8.6 0a4.3,4.3 0,1 0,-8.6 0z" />
+    <path android:fillColor="#FF111114" android:pathData="M0,0h108v108h-108z" />
+    <path android:strokeColor="#FFFFFFFF" android:strokeWidth="4" android:fillColor="#00000000"
+        android:pathData="M58.3,28.8h11.6a4.3,4.3 0,0 1,4.3 4.3v23.1a4.3,4.3 0,0 1,-4.3 4.3h-11.6a4.3,4.3 0,0 1,-4.3 -4.3v-23.1a4.3,4.3 0,0 1,4.3 -4.3z" />
+    <path android:strokeColor="#FFFFC51A" android:strokeWidth="8.6" android:strokeLineCap="round" android:fillColor="#00000000"
+        android:pathData="M62.6,39.6C51.1,32.4 32.4,36.7 35.3,48.2C38.2,58.3 68.4,54 68.4,65.5C68.4,77 45.4,79.9 32.4,71.3" />
+    <path android:strokeColor="#FFFFC51A" android:strokeWidth="2.9" android:strokeLineCap="round" android:pathData="M29.5,79.9H51.1" />
 </vector>

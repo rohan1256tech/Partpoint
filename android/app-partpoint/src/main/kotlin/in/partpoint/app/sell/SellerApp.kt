@@ -81,7 +81,7 @@ private val SELLER_TABS = listOf(
     SellerTabItem(SellerAccountTab, SellerAccountTab::class, "Account", Icons.Outlined.Person, Icons.Filled.Person),
 )
 
-/** The wholesaler's app: orders Partpoint sends them first (the daily work), then their stock, earnings and account. */
+/** The wholesaler's app: orders Sakshay Connect sends them first (the daily work), then their stock, earnings and account. */
 @Composable
 fun SellerApp(me: Me) {
     val nav = rememberNavController()
@@ -156,7 +156,7 @@ fun EarningsScreen(vm: EarningsViewModel = hiltViewModel()) {
                 Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
                     Surface(shape = RoundedCornerShape(20.dp), color = MaterialTheme.colorScheme.primaryContainer, modifier = Modifier.fillMaxWidth()) {
                         Column(Modifier.padding(20.dp)) {
-                            Text("Partpoint owes you", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onPrimaryContainer)
+                            Text("Sakshay Connect owes you", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onPrimaryContainer)
                             Text(rupees(b?.balancePaise ?: 0), style = MaterialTheme.typography.displaySmall, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onPrimaryContainer)
                             Text(
                                 "At your supply prices, for delivered orders. Paid to your bank by transfer.",
@@ -239,7 +239,7 @@ fun SellerAccountScreen(me: Me) {
                 }
             }
             Text(
-                "To change your business details, GSTIN or bank account, contact Partpoint support.",
+                "To change your business details, GSTIN or bank account, contact Sakshay Connect support.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )

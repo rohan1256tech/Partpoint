@@ -210,7 +210,7 @@ private fun ProductBody(
                     Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
                         Icon(Icons.Outlined.Verified, null, tint = MaterialTheme.colorScheme.primary)
                         Column(Modifier.padding(start = 12.dp).weight(1f)) {
-                            Text("Sold and delivered by Partpoint", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
+                            Text("Sold and delivered by Sakshay Connect", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
                             Text("Checked before dispatch · GST invoice with every order", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                     }

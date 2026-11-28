@@ -31,7 +31,7 @@ function SettingsForm({ saved }: { saved: PlatformSettings }) {
     <Stack maw={560}>
       <Title order={2}>Settings</Title>
       <Text size="sm" c="dimmed">
-        Changes apply to orders placed from now on. Existing orders keep their amounts. Partpoint's margin is the difference between the retailer
+        Changes apply to orders placed from now on. Existing orders keep their amounts. Sakshay Connect's margin is the difference between the retailer
         price and the wholesaler's supply price, set per product.
       </Text>
       <Paper withBorder p="md" radius="md">

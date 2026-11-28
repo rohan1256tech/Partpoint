@@ -88,7 +88,7 @@ export interface ProductSummary {
   createdAt: string;
 }
 
-/** A wholesaler's stock of one variant, and what Partpoint pays them for it. */
+/** A wholesaler's stock of one variant, and what Sakshay Connect pays them for it. */
 export interface Offer {
   wholesalerId: string;
   businessName: string;
@@ -180,9 +180,9 @@ export interface OrderDetail extends OrderSummary {
   subtotalPaise: number;
   discountPaise: number;
   deliveryFeePaise: number;
-  /** Partpoint's margin, once forwarded. */
+  /** Sakshay Connect's margin, once forwarded. */
   commissionPaise: number | null;
-  /** What Partpoint pays the wholesaler(s). */
+  /** What Sakshay Connect pays the wholesaler(s). */
   supplyTotalPaise: number | null;
   address: Address;
   items: {

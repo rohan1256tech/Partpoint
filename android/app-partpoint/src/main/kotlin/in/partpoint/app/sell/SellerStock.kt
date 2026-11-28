@@ -97,7 +97,7 @@ data class StockListState(
     val loaded: Boolean = false,
 )
 
-/** Partpoint's catalog, for a wholesaler choosing what they can supply. */
+/** Sakshay Connect's catalog, for a wholesaler choosing what they can supply. */
 @HiltViewModel
 class StockViewModel @Inject constructor(private val api: SellerApi) : ViewModel() {
     private val _state = MutableStateFlow(StockListState())
@@ -169,7 +169,7 @@ fun StockScreen(onProduct: (String) -> Unit, vm: StockViewModel = hiltViewModel(
                         text = it
                         vm.onQuery(it)
                     },
-                    placeholder = { Text("Search the Partpoint catalog") },
+                    placeholder = { Text("Search the Sakshay Connect catalog") },
                     leadingIcon = { Icon(Icons.Outlined.Search, null) },
                     singleLine = true,
                     shape = RoundedCornerShape(16.dp),
@@ -184,7 +184,7 @@ fun StockScreen(onProduct: (String) -> Unit, vm: StockViewModel = hiltViewModel(
                 LazyColumn(state = list, contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxSize()) {
                     item {
                         Text(
-                            "Partpoint sells these to retailers. Add your stock and the price you supply at; orders come to you when Partpoint picks your stock.",
+                            "Sakshay Connect sells these to retailers. Add your stock and the price you supply at; orders come to you when Sakshay Connect picks your stock.",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -223,7 +223,7 @@ private fun StockRow(p: ProductSummary, onClick: () -> Unit) {
             Column(Modifier.padding(start = 12.dp).weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 Text(p.name, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold, maxLines = 2, overflow = TextOverflow.Ellipsis)
                 Text(listOfNotNull(p.brandName, p.partNumber).joinToString(" · "), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                p.minPricePaise?.let { Text("Partpoint sells at ${rupees(it)}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+                p.minPricePaise?.let { Text("Sakshay Connect sells at ${rupees(it)}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
             }
             if (mine > 0) {
                 StatusPill("$mine in stock", MaterialTheme.colorScheme.secondary)
@@ -309,7 +309,7 @@ private fun OfferCard(v: Variant, vm: StockProductViewModel, snackbar: SnackbarH
     val priceError = when {
         price.isBlank() -> null
         pricePaise == null || pricePaise <= 0 -> "Enter a price, e.g. 1650 or 1650.50"
-        pricePaise > v.pricePaise -> "Above the Partpoint price (${rupees(v.pricePaise)}): orders are unlikely to come to you"
+        pricePaise > v.pricePaise -> "Above the Sakshay Connect price (${rupees(v.pricePaise)}): orders are unlikely to come to you"
         else -> null
     }
     val valid = pricePaise != null && pricePaise > 0 && stockQty != null
@@ -321,7 +321,7 @@ private fun OfferCard(v: Variant, vm: StockProductViewModel, snackbar: SnackbarH
                 Column(Modifier.weight(1f)) {
                     Text(v.name, style = MaterialTheme.typography.titleSmall)
                     Text(
-                        "Partpoint sells at ${rupees(v.pricePaise)} · MRP ${rupees(v.mrpPaise)}" + if (v.minOrderQty > 1) " · min ${v.minOrderQty}" else "",
+                        "Sakshay Connect sells at ${rupees(v.pricePaise)} · MRP ${rupees(v.mrpPaise)}" + if (v.minOrderQty > 1) " · min ${v.minOrderQty}" else "",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -350,7 +350,7 @@ private fun OfferCard(v: Variant, vm: StockProductViewModel, snackbar: SnackbarH
             priceError?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error) }
             if (offer != null && !active) {
                 Surface(shape = RoundedCornerShape(12.dp), color = MaterialTheme.colorScheme.surfaceContainerHigh) {
-                    Text("Paused: Partpoint will not send you orders for this until you switch it on.", style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(10.dp))
+                    Text("Paused: Sakshay Connect will not send you orders for this until you switch it on.", style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(10.dp))
                 }
             }
             PrimaryButton(

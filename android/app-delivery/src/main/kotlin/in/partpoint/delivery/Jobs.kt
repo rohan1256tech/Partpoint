@@ -88,6 +88,8 @@ import `in`.partpoint.core.ui.SavingGreen
 import `in`.partpoint.core.ui.SecureScreen
 import `in`.partpoint.core.ui.StatusPill
 import `in`.partpoint.core.ui.orderStatusColor
+import `in`.partpoint.core.ui.dateTime
+import `in`.partpoint.core.ui.rupees
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
@@ -109,7 +111,7 @@ fun riderStatus(status: String, accepted: Boolean = true) = when {
 
 // ------------------------------------------------------------------------------------- home (jobs)
 
-data class Home(val online: Boolean, val jobs: List<Job>)
+data class Home(val online: Boolean, val jobs: List<Job>, val open: List<OpenJob> = emptyList())
 
 @HiltViewModel
 class JobsViewModel @Inject constructor(private val api: DeliveryApi) : LoadingViewModel<Home>() {
@@ -125,7 +127,25 @@ class JobsViewModel @Inject constructor(private val api: DeliveryApi) : LoadingV
         val me = async { api.me() }
         val active = api.jobs(scope = "active").items
         val jobs = active.map { j -> async { api.job(j.id) } }.awaitAll()
-        Home(me.await().profile?.isAvailable ?: false, jobs.sortedWith(compareByDescending<Job> { it.isOffer }.thenBy { it.createdAt }))
+        val open = async { runCatching { api.openJobs().items }.getOrDefault(emptyList()) }
+        Home(me.await().profile?.isAvailable ?: false, jobs.sortedWith(compareByDescending<Job> { it.isOffer }.thenBy { it.createdAt }), open.await())
+    }
+
+    private val _taking = MutableStateFlow<String?>(null)
+    val taking: StateFlow<String?> = _taking.asStateFlow()
+
+    /** First come, first served: another rider may have taken it a moment ago. */
+    fun take(id: String, onTaken: (String) -> Unit, onError: (String) -> Unit) = viewModelScope.launch {
+        _taking.value = id
+        try {
+            apiCall { api.take(id) }
+            onTaken(id)
+        } catch (e: ApiException) {
+            onError(e.message ?: "Couldn't take this job")
+            reload(pullToRefresh = true)
+        } finally {
+            _taking.value = null
+        }
     }
 
     fun setOnline(online: Boolean, onError: (String) -> Unit) = viewModelScope.launch {
@@ -147,12 +167,13 @@ fun JobsScreen(onJob: (String) -> Unit, vm: JobsViewModel = hiltViewModel()) {
     val state by vm.state.collectAsStateWithLifecycle()
     val refreshing by vm.refreshing.collectAsStateWithLifecycle()
     val toggling by vm.toggling.collectAsStateWithLifecycle()
+    val taking by vm.taking.collectAsStateWithLifecycle()
     val snackbar = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
     LaunchedEffect(Unit) { vm.reload() }
     RefreshOnOrderPush { vm.reload(pullToRefresh = true) }
 
-    Scaffold(topBar = { TopAppBar(title = { Text("Partpoint Delivery", fontWeight = FontWeight.Bold) }) }, snackbarHost = { SnackbarHost(snackbar) }) { padding ->
+    Scaffold(topBar = { TopAppBar(title = { `in`.partpoint.core.ui.Wordmark(markSize = 28.dp, textSize = 19.sp, suffix = "Delivery") }) }, snackbarHost = { SnackbarHost(snackbar) }) { padding ->
         when (val s = state) {
             Load.Loading -> LoadingScreen()
             is Load.Failed -> ErrorState(s.message) { vm.reload() }
@@ -168,7 +189,7 @@ fun JobsScreen(onJob: (String) -> Unit, vm: JobsViewModel = hiltViewModel()) {
                                 Column(Modifier.weight(1f)) {
                                     Text(if (home.online) "You're online" else "You're offline", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
                                     Text(
-                                        if (home.online) "Partpoint can send you delivery jobs." else "Go online to get delivery jobs.",
+                                        if (home.online) "Packed orders near you are offered here." else "Go online to get delivery jobs.",
                                         style = MaterialTheme.typography.bodyMedium,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     )
@@ -182,7 +203,15 @@ fun JobsScreen(onJob: (String) -> Unit, vm: JobsViewModel = hiltViewModel()) {
                         }
                     }
                     item { NotificationPrompt("rider_jobs", "Get job offers instantly", "New delivery jobs are offered by notification. Without it you'll only see them when you open the app.") }
-                    if (home.jobs.isEmpty()) {
+                    if (home.online && home.open.isNotEmpty()) {
+                        item { Text("Ready for pickup (${home.open.size})", style = MaterialTheme.typography.titleSmall) }
+                        items(home.open, key = { "open-" + it.id }) { j ->
+                            OpenJobCard(j, busy = taking == j.id, enabled = taking == null) {
+                                vm.take(j.id, onTaken = onJob, onError = { msg -> scope.launch { snackbar.showSnackbar(msg) } })
+                            }
+                        }
+                    }
+                    if (home.jobs.isEmpty() && (!home.online || home.open.isEmpty())) {
                         item {
                             Column(Modifier.fillMaxWidth().padding(top = 48.dp)) {
                                 MessageState(
@@ -192,12 +221,33 @@ fun JobsScreen(onJob: (String) -> Unit, vm: JobsViewModel = hiltViewModel()) {
                                 )
                             }
                         }
-                    } else {
+                    } else if (home.jobs.isNotEmpty()) {
                         item { Text("Your jobs", style = MaterialTheme.typography.titleSmall) }
                         items(home.jobs, key = { it.id }) { j -> JobCard(j) { onJob(j.id) } }
                     }
                 }
             }
+        }
+    }
+}
+
+/** An order waiting for any rider: where to collect, where it goes, what you earn. */
+@Composable
+private fun OpenJobCard(j: OpenJob, busy: Boolean, enabled: Boolean, onTake: () -> Unit) {
+    Card(shape = RoundedCornerShape(18.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow), border = androidx.compose.foundation.BorderStroke(1.5.dp, `in`.partpoint.core.ui.BrandColors.Yellow)) {
+        Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text(j.orderNumber, style = MaterialTheme.typography.labelLarge)
+                    Text("Ready ${dateTime(j.readySince)} · ${j.itemCount} item(s)", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                if (j.earningPaise > 0) {
+                    Text("Earn ${rupees(j.earningPaise)}", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = SavingGreen)
+                }
+            }
+            Leg(Icons.Outlined.Storefront, "Pick up", j.pickup.businessName.orEmpty(), "${j.pickup.city} ${j.pickup.pincode}")
+            Leg(Icons.Outlined.Store, "Deliver to", "${j.drop.city} ${j.drop.pincode}", null)
+            PrimaryButton("Take this job", onClick = onTake, enabled = enabled, loading = busy)
         }
     }
 }
@@ -414,12 +464,16 @@ private fun ActionBar(j: Job, busy: Boolean, allChecked: Boolean, vm: JobViewMod
                     OutlinedButton(onClick = onDecline, enabled = !busy) { Text("Decline") }
                     Column(Modifier.weight(1f)) { PrimaryButton("Accept job", onClick = { vm.accept(showError) }, loading = busy) }
                 }
-                j.status == "assigned" -> PrimaryButton(
-                    if (allChecked) "Picked up" else "Tick all items to confirm pickup",
-                    onClick = { vm.pickup(showError) },
-                    enabled = allChecked,
-                    loading = busy,
-                )
+                j.status == "assigned" -> {
+                    PrimaryButton(
+                        if (allChecked) "Picked up" else "Tick all items to confirm pickup",
+                        onClick = { vm.pickup(showError) },
+                        enabled = allChecked,
+                        loading = busy,
+                    )
+                    // Before pickup a rider can still give the job back; it is offered to others again.
+                    TextButton(onClick = onDecline, enabled = !busy, modifier = Modifier.fillMaxWidth()) { Text("Can't do this job? Give it back") }
+                }
                 j.status == "picked_up" -> PrimaryButton("Start delivery", onClick = { vm.startDelivery(showError) }, loading = busy)
                 j.status == "out_for_delivery" -> CodeEntry(busy) { code -> vm.deliver(code, showError) }
             }

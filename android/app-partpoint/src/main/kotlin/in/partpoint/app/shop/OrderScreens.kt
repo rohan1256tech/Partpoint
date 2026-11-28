@@ -10,6 +10,9 @@ import android.content.Intent
 import android.net.Uri
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.material.icons.outlined.LocalShipping
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -204,7 +207,6 @@ class OrderDetailViewModel @Inject constructor(
     }
 }
 
-private val STEPS = listOf("placed" to "Placed", "accepted" to "Confirmed", "packed" to "Packed", "picked_up" to "On the way", "delivered" to "Delivered")
 private fun stepIndex(status: String) = when (status) {
     "placed", "forwarded" -> 0
     "accepted" -> 1
@@ -243,7 +245,7 @@ fun OrderDetailScreen(onBack: () -> Unit, onProduct: (String) -> Unit, vm: Order
                 Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Column(Modifier.weight(1f)) {
-                            Text("Partpoint order", style = MaterialTheme.typography.titleMedium)
+                            Text("Sakshay Connect order", style = MaterialTheme.typography.titleMedium)
                             Text("Placed ${dateTime(o.createdAt)}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                         StatusPill(friendlyStatus(o.status), orderStatusColor(o.status))
@@ -263,7 +265,7 @@ fun OrderDetailScreen(onBack: () -> Unit, onProduct: (String) -> Unit, vm: Order
                             Text("Cancelled${o.cancelReason?.let { ": $it" } ?: ""}", modifier = Modifier.padding(12.dp), color = MaterialTheme.colorScheme.onErrorContainer)
                         }
                     } else {
-                        Stepper(stepIndex(o.status))
+                        TrackingTimeline(o)
                     }
 
                     if (o.deliveryOtp != null) DeliveryCode(o.deliveryOtp)
@@ -365,30 +367,84 @@ fun OrderDetailScreen(onBack: () -> Unit, onProduct: (String) -> Unit, vm: Order
     }
 }
 
+private data class TrackStep(val status: String, val title: String, val now: String)
+
+/** Every stage the retailer can see, with what is happening while the order sits there. */
+private val TRACK = listOf(
+    TrackStep("placed", "Order placed", "We are confirming stock for your order"),
+    TrackStep("accepted", "Confirmed", "Your parts are being prepared"),
+    TrackStep("packed", "Packed", "Packed with the GST invoice, waiting for a delivery partner"),
+    TrackStep("assigned", "Delivery partner assigned", "On the way to collect your parcel"),
+    TrackStep("picked_up", "Picked up", "Your parcel has been collected"),
+    TrackStep("out_for_delivery", "Out for delivery", "Arriving soon: keep your delivery code ready"),
+    TrackStep("delivered", "Delivered", "Delivered to your shop"),
+)
+
+private fun trackIndex(status: String) = when (status) {
+    "placed", "forwarded" -> 0
+    "accepted" -> 1
+    "packed" -> 2
+    "assigned" -> 3
+    "picked_up" -> 4
+    "out_for_delivery" -> 5
+    "delivered" -> 6
+    else -> -1
+}
+
+/** A vertical tracker: done steps ticked with their time, the current one highlighted. */
 @Composable
-private fun Stepper(current: Int) {
-    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Top) {
-        STEPS.forEachIndexed { i, (_, label) ->
-            val done = i <= current
-            Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Box(Modifier.weight(1f).height(2.dp)) {
-                        if (i > 0) Surface(color = if (done) SavingGreen else MaterialTheme.colorScheme.outlineVariant, modifier = Modifier.fillMaxSize()) {}
+private fun TrackingTimeline(o: OrderDetail) {
+    val current = trackIndex(o.status)
+    // When each stage was reached: the first event of that status (assigned: the latest, after a reassignment).
+    val at = TRACK.associate { step ->
+        val events = o.timeline.filter { it.status == step.status || (step.status == "placed" && it.status == "forwarded") }
+        step.status to (if (step.status == "assigned") events.lastOrNull() else events.firstOrNull())?.at
+    }
+    Surface(shape = RoundedCornerShape(20.dp), color = MaterialTheme.colorScheme.surfaceContainerLow) {
+        Column(Modifier.fillMaxWidth().padding(16.dp)) {
+            Text("Track order", style = MaterialTheme.typography.titleMedium)
+            Spacer(Modifier.height(12.dp))
+            TRACK.forEachIndexed { i, step ->
+                val done = i < current || (i == current && step.status == "delivered")
+                val isNow = i == current && !done
+                Row(Modifier.fillMaxWidth().height(androidx.compose.foundation.layout.IntrinsicSize.Min)) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.width(36.dp)) {
+                        when {
+                            done -> Surface(shape = CircleShape, color = SavingGreen, modifier = Modifier.size(26.dp)) {
+                                Icon(Icons.Outlined.Check, contentDescription = null, tint = Color.White, modifier = Modifier.padding(4.dp))
+                            }
+                            isNow -> Surface(shape = CircleShape, color = `in`.partpoint.core.ui.BrandColors.Yellow, modifier = Modifier.size(34.dp)) {
+                                Icon(
+                                    if (step.status in setOf("assigned", "picked_up", "out_for_delivery")) Icons.Outlined.LocalShipping else Icons.Outlined.Inventory2,
+                                    contentDescription = null,
+                                    tint = `in`.partpoint.core.ui.BrandColors.Ink,
+                                    modifier = Modifier.padding(6.dp),
+                                )
+                            }
+                            else -> Box(
+                                Modifier.size(22.dp).border(2.dp, MaterialTheme.colorScheme.outlineVariant, CircleShape),
+                            )
+                        }
+                        if (i < TRACK.lastIndex) {
+                            Box(
+                                Modifier.width(2.dp).weight(1f).background(if (i < current) SavingGreen else MaterialTheme.colorScheme.outlineVariant),
+                            )
+                        }
                     }
-                    Surface(shape = CircleShape, color = if (done) SavingGreen else MaterialTheme.colorScheme.outlineVariant, modifier = Modifier.size(22.dp)) {
-                        if (done) Icon(Icons.Outlined.Check, null, tint = Color.White, modifier = Modifier.padding(3.dp))
-                    }
-                    Box(Modifier.weight(1f).height(2.dp)) {
-                        if (i < STEPS.lastIndex) Surface(color = if (i < current) SavingGreen else MaterialTheme.colorScheme.outlineVariant, modifier = Modifier.fillMaxSize()) {}
+                    Column(Modifier.padding(start = 12.dp, bottom = if (i < TRACK.lastIndex) 18.dp else 0.dp).weight(1f)) {
+                        Text(
+                            step.title,
+                            style = if (isNow) MaterialTheme.typography.titleMedium else MaterialTheme.typography.bodyLarge,
+                            fontWeight = if (isNow || done) FontWeight.SemiBold else null,
+                            color = if (done || isNow) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        val time = at[step.status]
+                        when {
+                            isNow -> Text(step.now, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            done && time != null -> Text(dateTime(time), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
                     }
                 }
-                Text(
-                    label,
-                    style = MaterialTheme.typography.labelSmall,
-                    fontWeight = if (i == current) FontWeight.Bold else null,
-                    color = if (done) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(top = 4.dp),
-                )
             }
         }
     }

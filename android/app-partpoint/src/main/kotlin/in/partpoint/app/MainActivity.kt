@@ -66,7 +66,7 @@ class MainActivity : ComponentActivity() {
 private fun Root(vm: SessionViewModel = hiltViewModel()) {
     val session by vm.session.collectAsStateWithLifecycle()
     when (val s = session) {
-        Session.Loading -> LoadingScreen()
+        Session.Loading -> `in`.partpoint.core.ui.BrandSplash()
         is Session.SignedOut -> SignedOutFlow(s.notice)
         is Session.Active -> when {
             !s.me.isApproved -> PendingApprovalScreen(s.me)
@@ -85,7 +85,7 @@ private fun SignedOutFlow(notice: String?) {
             androidx.compose.foundation.layout.Column {
                 SignedOutNotice(notice)
                 LoginScreen(
-                    appTitle = "Partpoint",
+                    appTitle = "Sakshay Connect",
                     tagline = "Mobile spare parts and accessories at wholesale prices, delivered to your shop.",
                     onNeedsSignup = { phone, token -> nav.navigate(Signup(phone, token)) { launchSingleTop = true } },
                     onUseEmail = { nav.navigate(EmailSignIn) { launchSingleTop = true } },
@@ -109,7 +109,7 @@ private fun SignedOutFlow(notice: String?) {
                     onUsePhone = { nav.popBackStack() },
                 )
                 androidx.compose.material3.TextButton(onClick = { nav.navigate(Signup()) }, modifier = androidx.compose.ui.Modifier.padding(horizontal = 16.dp)) {
-                    Text("New to Partpoint? Create an account with email")
+                    Text("New to Sakshay Connect? Create an account with email")
                 }
             }
         }

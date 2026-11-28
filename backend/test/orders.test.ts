@@ -224,7 +224,7 @@ describe('placing orders', () => {
     expect(res.statusCode).toBe(201);
     const placed = res.json();
     expect(placed.orders).toHaveLength(1);
-    expect(placed.orders[0]).toMatchObject({ totalPaise: 530_000, orderNumber: expect.stringMatching(/^PP-\d{8}-\d{6}$/) });
+    expect(placed.orders[0]).toMatchObject({ totalPaise: 530_000, orderNumber: expect.stringMatching(/^SC-\d{8}-\d{6}$/) });
     expect(await stockOf(w1.id, display)).toBe(120);
     expect((await http.get('/v1/cart', retailer.token)).json().itemCount).toBe(0);
 

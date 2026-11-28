@@ -170,7 +170,7 @@ function OrderBody({ o, onOpen }: { o: OrderDetail; onOpen: (id: string) => void
         {o.deliveryFeePaise > 0 && <Money label="Delivery fee" paise={o.deliveryFeePaise} />}
         <Money label="Total" paise={o.totalPaise} bold />
         {o.supplyTotalPaise !== null && <Money label="Paid to wholesaler" paise={o.supplyTotalPaise} dimmed />}
-        {o.commissionPaise !== null && <Money label="Partpoint margin" paise={o.commissionPaise} dimmed />}
+        {o.commissionPaise !== null && <Money label="Margin" paise={o.commissionPaise} dimmed />}
       </Stack>
 
       {o.status === 'placed' && (
@@ -236,7 +236,9 @@ function DeliverySection({ o, invalidate }: { o: OrderDetail; invalidate: string
         </Text>
       ) : (
         <Text size="sm" c="dimmed">
-          No rider assigned.
+          {o.status === 'packed'
+            ? 'Offered to every available rider in the delivery app; the first to take it gets it. You can also assign one yourself.'
+            : 'No rider assigned.'}
         </Text>
       )}
       {locked && (

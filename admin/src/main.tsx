@@ -11,8 +11,14 @@ import { ApiError } from './api/client';
 import { App } from './App';
 import { SessionProvider } from './auth/session';
 
+/** Sakshay Connect yellow; autoContrast puts black text on yellow buttons. */
 const theme = createTheme({
-  primaryColor: 'blue',
+  colors: {
+    brand: ['#fff9e1', '#fff1cc', '#ffe29b', '#ffd264', '#ffc537', '#ffbd1a', '#ffb800', '#e3a200', '#ca8f00', '#af7b00'],
+  },
+  primaryColor: 'brand',
+  primaryShade: { light: 5, dark: 5 },
+  autoContrast: true,
   defaultRadius: 'md',
   fontFamily: 'system-ui, -apple-system, "Segoe UI", Roboto, sans-serif',
 });

@@ -163,7 +163,7 @@ function NewProduct({ onCreated }: { onCreated: (id: string) => void }) {
       <DetailsFields value={details} onChange={setDetails} />
       <Divider label="Variants" labelPosition="left" />
       <Text size="sm" c="dimmed">
-        One row per option the retailer can choose: colour, quality, with or without frame, pack size. Price is what retailers pay Partpoint, GST
+        One row per option the retailer can choose: colour, quality, with or without frame, pack size. Price is what retailers pay Sakshay Connect, GST
         included.
       </Text>
       {variants.map((v, i) => (
@@ -419,7 +419,7 @@ function VariantCard({ v, onEdit }: { v: Variant; onEdit: () => void }) {
       </Text>
       {offers.length === 0 ? (
         <Text size="sm" c="dimmed">
-          No wholesaler stocks this yet. Wholesalers add stock from the Partpoint app.
+          No wholesaler stocks this yet. Wholesalers add stock from the Sakshay Connect app.
         </Text>
       ) : (
         <Table fz="sm" verticalSpacing={4}>

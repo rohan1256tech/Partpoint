@@ -291,7 +291,7 @@ class CheckoutViewModel @Inject constructor(private val api: ShopApi, val cart: 
 
     override suspend fun fetch() = CheckoutData(api.addresses().items)
 
-    /** Places the order with Partpoint; returns it for the confirmation screen. */
+    /** Places the order with Sakshay Connect; returns it for the confirmation screen. */
     suspend fun place(addressId: String): PlacedOrder {
         val placed = apiCall { api.placeOrder(PlaceOrderBody(addressId, idempotencyKey, cart.couponCode.value)) }
         cart.clearLocal()
@@ -370,7 +370,7 @@ fun CheckoutScreen(onBack: () -> Unit, onPlaced: (PlacedOrder) -> Unit, vm: Chec
                         item {
                             Surface(shape = RoundedCornerShape(12.dp), color = MaterialTheme.colorScheme.secondaryContainer) {
                                 Text(
-                                    "Payment: pay on delivery or as agreed with Partpoint. Online payment is coming soon.",
+                                    "Payment: pay on delivery or as agreed with Sakshay Connect. Online payment is coming soon.",
                                     style = MaterialTheme.typography.bodySmall,
                                     modifier = Modifier.padding(12.dp),
                                 )
@@ -515,7 +515,7 @@ fun OrderPlacedScreen(orderNumber: String, totalPaise: Long, onViewOrders: () ->
                 modifier = Modifier.padding(top = 6.dp),
             )
             Text(
-                "Partpoint is confirming stock and will pack your order. We will notify you at every step, and you get a delivery code when it is on the way.",
+                "Sakshay Connect is confirming stock and will pack your order. We will notify you at every step, and you get a delivery code when it is on the way.",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = androidx.compose.ui.text.style.TextAlign.Center,

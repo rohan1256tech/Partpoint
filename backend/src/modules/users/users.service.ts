@@ -157,7 +157,7 @@ export class UsersService {
     if (next === 'approved') {
       this.notifications.notifyUsers([userId], {
         title: 'Account approved',
-        body: 'Your Partpoint account is approved. You can start using the app now.',
+        body: 'Your Sakshay Connect account is approved. You can start using the app now.',
         data: { type: 'account', status: 'approved' },
       });
     }

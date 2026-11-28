@@ -195,6 +195,55 @@ describe('delivery flow', () => {
   });
 });
 
+describe('open jobs (first rider to take it gets it)', () => {
+  it('offers a packed order to every available rider; the first to take it wins', async () => {
+    const other = await signIn(t, 'delivery', { name: 'Suresh' });
+    await http.put('/v1/me/push-token', rider.token, { token: 'rider-device-token-0000000001' });
+    await http.put('/v1/me/push-token', other.token, { token: 'other-rider-device-token-0001' });
+    await http.patch('/v1/admin/settings', admin, { deliveryEarningPaise: 3_000 });
+    const id = await packedOrder();
+    await t.pushes();
+    expect(t.push.titlesFor('rider-device-token-0000000001')).toEqual(['Order ready for pickup']);
+    expect(t.push.titlesFor('other-rider-device-token-0001')).toEqual(['Order ready for pickup']);
+    const offer = t.push.sent.find((p) => p.message.title === 'Order ready for pickup')?.message;
+    expect(offer?.data).toEqual({ type: 'job', orderId: id });
+
+    const jobs = (await http.get('/v1/delivery/jobs', other.token)).json().items;
+    expect(jobs).toHaveLength(1);
+    expect(jobs[0]).toMatchObject({ id, itemCount: 1, earningPaise: 3_000, drop: { city: 'Nashik', pincode: '422001' } });
+    // Only areas before the job is taken: no street address or phone numbers.
+    expect(JSON.stringify(jobs[0])).not.toMatch(/Gandhi Market|9876543210/);
+
+    const results = await Promise.all([
+      http.post(`/v1/delivery/jobs/${id}/take`, rider.token),
+      http.post(`/v1/delivery/jobs/${id}/take`, other.token),
+    ]);
+    expect(results.map((r) => r.statusCode).sort()).toEqual([200, 409]);
+    const loser = results.find((r) => r.statusCode === 409);
+    expect(loser?.json().code).toBe('JOB_TAKEN');
+    const winner = results.find((r) => r.statusCode === 200)?.json();
+    expect(winner).toMatchObject({ status: 'assigned', deliveryAccepted: true, address: { line1: 'Shop 4, Gandhi Market' } });
+    expect((await http.get('/v1/delivery/jobs', other.token)).json().items).toEqual([]);
+
+    const admin_ = (await http.get(`/v1/admin/orders/${id}`, admin)).json();
+    expect(admin_.timeline.at(-1).note).toMatch(/^Taken by /);
+  });
+
+  it('puts a job back on offer when its rider gives it up before pickup', async () => {
+    const id = await packedOrder();
+    await http.post(`/v1/delivery/jobs/${id}/take`, rider.token);
+    expect((await http.post(`/v1/delivery/orders/${id}/decline`, rider.token, { reason: 'Vehicle trouble' })).statusCode).toBe(204);
+    expect((await http.get('/v1/delivery/jobs', rider.token)).json().items.map((j: { id: string }) => j.id)).toEqual([id]);
+  });
+
+  it('needs the rider to be online to take a job', async () => {
+    const id = await packedOrder();
+    await http.patch('/v1/delivery/availability', rider.token, { isAvailable: false });
+    expect((await http.post(`/v1/delivery/jobs/${id}/take`, rider.token)).json().code).toBe('PARTNER_UNAVAILABLE');
+    expect((await http.get('/v1/delivery/jobs', retailer.token)).statusCode).toBe(403);
+  });
+});
+
 describe('push notifications', () => {
   it('tells each party about the order events that concern them', async () => {
     await http.put('/v1/me/push-token', retailer.token, { token: 'retailer-device-token-000001' });
@@ -207,11 +256,11 @@ describe('push notifications', () => {
 
     expect(t.push.titlesFor('wholesaler-device-token-0001')).toEqual(['New order']);
     expect(t.push.titlesFor('retailer-device-token-000001')).toEqual(['Order confirmed', 'Order packed']);
-    expect(t.push.titlesFor('rider-device-token-0000000001')).toEqual(['New delivery']);
+    expect(t.push.titlesFor('rider-device-token-0000000001')).toEqual(['Order ready for pickup', 'New delivery']);
     const msg = t.push.sent.find((s) => s.message.title === 'New delivery')?.message;
     expect(msg?.data).toEqual({ type: 'order', orderId: id, status: 'assigned' });
     // No personal data in pushes: just the order number.
-    expect(msg?.body).toMatch(/^PP-\d{8}-\d{6} is assigned to you$/);
+    expect(msg?.body).toMatch(/^SC-\d{8}-\d{6} is assigned to you$/);
   });
 
   it('tells a user when their account is approved', async () => {

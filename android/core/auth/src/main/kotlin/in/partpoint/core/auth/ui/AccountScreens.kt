@@ -15,6 +15,9 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.outlined.Schedule
+import androidx.compose.foundation.layout.padding
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
@@ -76,16 +79,37 @@ fun PendingApprovalScreen(me: Me, vm: SessionViewModel = hiltViewModel()) {
     val busy by vm.busy.collectAsStateWithLifecycle()
     val error by vm.error.collectAsStateWithLifecycle()
     ScreenColumn {
-        Spacer(Modifier.height(24.dp))
-        Text("Thanks, ${me.name.substringBefore(' ')}", style = MaterialTheme.typography.headlineMedium)
+        `in`.partpoint.core.ui.BrandHero {
+            `in`.partpoint.core.ui.BrandMark(size = 48.dp)
+            Spacer(Modifier.height(12.dp))
+            Text("Thanks, ${me.name.substringBefore(' ')}", style = MaterialTheme.typography.headlineSmall, color = androidx.compose.ui.graphics.Color.White)
+            Text("Your account is under review", style = MaterialTheme.typography.titleSmall, color = `in`.partpoint.core.ui.BrandColors.Yellow)
+        }
         Text(
-            "Your account is waiting for approval. We check every new business account to keep the marketplace " +
-                "safe. You will get a notification as soon as it is approved.",
+            "We check every new business account to keep the network safe. The app opens fully as soon as our team approves you, and you get a notification.",
             style = MaterialTheme.typography.bodyLarge,
         )
+        ApprovalStep(done = true, title = "Account created", body = "Your details have reached our team.")
+        ApprovalStep(done = false, title = "Review by Sakshay Connect", body = "We verify your business details.")
+        ApprovalStep(done = false, title = "Start using the app", body = "Shop, supply or deliver, depending on your account.")
         ErrorText(error)
         PrimaryButton("Check again", onClick = vm::reload, loading = busy)
         AccountActions(vm)
+    }
+}
+
+@Composable
+private fun ApprovalStep(done: Boolean, title: String, body: String) {
+    androidx.compose.foundation.layout.Row(verticalAlignment = androidx.compose.ui.Alignment.Top) {
+        androidx.compose.material3.Icon(
+            if (done) androidx.compose.material.icons.Icons.Filled.CheckCircle else androidx.compose.material.icons.Icons.Outlined.Schedule,
+            contentDescription = if (done) "Done" else "Pending",
+            tint = if (done) `in`.partpoint.core.ui.SavingGreen else MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        androidx.compose.foundation.layout.Column(Modifier.padding(start = 12.dp)) {
+            Text(title, style = MaterialTheme.typography.titleSmall)
+            Text(body, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
     }
 }
 

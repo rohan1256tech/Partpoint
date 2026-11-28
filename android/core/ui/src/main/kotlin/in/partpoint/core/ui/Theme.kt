@@ -16,29 +16,33 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
 /**
- * Partpoint brand: electric indigo (trust, technology) with a violet sweep, teal for stock and
- * availability, amber for deals. Change these in one place when the client's identity arrives.
+ * Sakshay Connect brand: signal yellow on near-black, as in the client's artwork. Yellow is for
+ * calls to action and highlights; text stays black (light) or white (dark) so it is always
+ * readable. Change these in one place if the identity changes.
  */
 object BrandColors {
-    val Indigo = Color(0xFF4338CA)
-    val Violet = Color(0xFF7C3AED)
-    val Teal = Color(0xFF0D9488)
-    val Amber = Color(0xFFF59E0B)
-    val Ink = Color(0xFF14162B)
+    val Yellow = Color(0xFFFFC51A)
+    val YellowSoft = Color(0xFFFFF0BF)
+    val Ink = Color(0xFF111114)
+    val Charcoal = Color(0xFF26272D)
+    /** Stock, savings, success. */
+    val Green = Color(0xFF0E8A5A)
+    /** Ratings and deal badges. */
+    val Amber = Color(0xFFFFB020)
 }
 
-/** The brand sweep, used on the logo, the home header and hero cards. */
-val BrandGradient: Brush = Brush.linearGradient(listOf(BrandColors.Indigo, BrandColors.Violet))
+/** The dark brand panel behind the home header, splash and sign-in hero. */
+val BrandGradient: Brush = Brush.linearGradient(listOf(BrandColors.Ink, BrandColors.Charcoal))
 
 private val Light = lightColorScheme(
-    primary = BrandColors.Indigo,
-    onPrimary = Color.White,
-    primaryContainer = Color(0xFFE3E6FF),
-    onPrimaryContainer = Color(0xFF1B1760),
-    secondary = BrandColors.Teal,
+    primary = BrandColors.Ink,
+    onPrimary = BrandColors.Yellow,
+    primaryContainer = Color(0xFFFFE07A),
+    onPrimaryContainer = BrandColors.Ink,
+    secondary = BrandColors.Green,
     onSecondary = Color.White,
-    secondaryContainer = Color(0xFFD2F5EF),
-    onSecondaryContainer = Color(0xFF053B36),
+    secondaryContainer = Color(0xFFFFE9A6),
+    onSecondaryContainer = BrandColors.Ink,
     tertiary = Color(0xFFB45309),
     onTertiary = Color.White,
     tertiaryContainer = Color(0xFFFEF0C7),
@@ -46,30 +50,30 @@ private val Light = lightColorScheme(
     error = Color(0xFFC0262D),
     errorContainer = Color(0xFFFDE3E3),
     onErrorContainer = Color(0xFF5F1014),
-    background = Color(0xFFF4F5FA),
+    background = Color(0xFFF6F6F3),
     onBackground = BrandColors.Ink,
-    surface = Color(0xFFF4F5FA),
+    surface = Color(0xFFF6F6F3),
     onSurface = BrandColors.Ink,
-    surfaceVariant = Color(0xFFE7E9F3),
-    onSurfaceVariant = Color(0xFF585D74),
+    surfaceVariant = Color(0xFFECECE6),
+    onSurfaceVariant = Color(0xFF5C5D63),
     surfaceContainerLowest = Color.White,
     surfaceContainerLow = Color.White,
-    surfaceContainer = Color(0xFFEEF0F7),
-    surfaceContainerHigh = Color(0xFFE8EAF3),
-    surfaceContainerHighest = Color(0xFFE1E4EF),
-    outline = Color(0xFFC3C7D7),
-    outlineVariant = Color(0xFFE2E4EE),
+    surfaceContainer = Color(0xFFF0F0EB),
+    surfaceContainerHigh = Color(0xFFEAEAE4),
+    surfaceContainerHighest = Color(0xFFE3E3DC),
+    outline = Color(0xFFC9C9C1),
+    outlineVariant = Color(0xFFE5E5DE),
 )
 
 private val Dark = darkColorScheme(
-    primary = Color(0xFFAEB6FF),
-    onPrimary = Color(0xFF1B1760),
-    primaryContainer = Color(0xFF3A33A8),
-    onPrimaryContainer = Color(0xFFE3E6FF),
-    secondary = Color(0xFF6EE7D6),
-    onSecondary = Color(0xFF053B36),
-    secondaryContainer = Color(0xFF11534D),
-    onSecondaryContainer = Color(0xFFD2F5EF),
+    primary = BrandColors.Yellow,
+    onPrimary = BrandColors.Ink,
+    primaryContainer = Color(0xFF4A3B00),
+    onPrimaryContainer = Color(0xFFFFE07A),
+    secondary = Color(0xFF4ADE80),
+    onSecondary = Color(0xFF05301C),
+    secondaryContainer = Color(0xFF3D3200),
+    onSecondaryContainer = Color(0xFFFFE07A),
     tertiary = Color(0xFFFCD34D),
     onTertiary = Color(0xFF4A2104),
     tertiaryContainer = Color(0xFF6B3410),
@@ -77,19 +81,19 @@ private val Dark = darkColorScheme(
     error = Color(0xFFFF8A8F),
     errorContainer = Color(0xFF7A1C21),
     onErrorContainer = Color(0xFFFDE3E3),
-    background = Color(0xFF0C0E19),
-    onBackground = Color(0xFFE6E8F4),
-    surface = Color(0xFF0C0E19),
-    onSurface = Color(0xFFE6E8F4),
-    surfaceVariant = Color(0xFF2A2E44),
-    onSurfaceVariant = Color(0xFFB5B9CE),
-    surfaceContainerLowest = Color(0xFF080A12),
-    surfaceContainerLow = Color(0xFF151829),
-    surfaceContainer = Color(0xFF1A1D30),
-    surfaceContainerHigh = Color(0xFF22263B),
-    surfaceContainerHighest = Color(0xFF2B2F46),
-    outline = Color(0xFF5A5F78),
-    outlineVariant = Color(0xFF2E3249),
+    background = Color(0xFF0E0F12),
+    onBackground = Color(0xFFEDEDE8),
+    surface = Color(0xFF0E0F12),
+    onSurface = Color(0xFFEDEDE8),
+    surfaceVariant = Color(0xFF2C2D33),
+    onSurfaceVariant = Color(0xFFB9BAC0),
+    surfaceContainerLowest = Color(0xFF09090B),
+    surfaceContainerLow = Color(0xFF17181C),
+    surfaceContainer = Color(0xFF1C1D22),
+    surfaceContainerHigh = Color(0xFF24252B),
+    surfaceContainerHighest = Color(0xFF2D2E35),
+    outline = Color(0xFF5D5E66),
+    outlineVariant = Color(0xFF303138),
 )
 
 private val BrandShapes = Shapes(
@@ -102,10 +106,10 @@ private val BrandShapes = Shapes(
 
 private val BrandTypography = Typography().run {
     copy(
-        headlineLarge = headlineLarge.copy(fontWeight = FontWeight.Bold, letterSpacing = (-0.5).sp),
-        headlineMedium = headlineMedium.copy(fontWeight = FontWeight.Bold, letterSpacing = (-0.4).sp),
+        headlineLarge = headlineLarge.copy(fontWeight = FontWeight.ExtraBold, letterSpacing = (-0.5).sp),
+        headlineMedium = headlineMedium.copy(fontWeight = FontWeight.ExtraBold, letterSpacing = (-0.4).sp),
         headlineSmall = headlineSmall.copy(fontWeight = FontWeight.Bold, letterSpacing = (-0.2).sp),
-        titleLarge = titleLarge.copy(fontWeight = FontWeight.SemiBold),
+        titleLarge = titleLarge.copy(fontWeight = FontWeight.Bold),
         titleMedium = titleMedium.copy(fontWeight = FontWeight.SemiBold),
         titleSmall = titleSmall.copy(fontWeight = FontWeight.SemiBold),
         labelLarge = labelLarge.copy(fontWeight = FontWeight.SemiBold),

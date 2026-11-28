@@ -109,7 +109,7 @@ describe('web deletion requests', () => {
     expect(res.statusCode).toBe(200);
     expect(res.headers['content-type']).toBe('text/html; charset=utf-8');
     expect(res.headers['content-security-policy']).toContain("default-src 'none'");
-    expect(res.body).toContain('Delete your Partpoint account');
+    expect(res.body).toContain('Delete your Sakshay Connect account');
     expect(res.body).toContain('/v1/account-deletion-requests');
   });
 

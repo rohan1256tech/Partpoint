@@ -48,7 +48,7 @@ export function LoginPage() {
     <Center mih="100vh" p="md">
       <Paper withBorder radius="md" p="xl" w={380} shadow="sm">
         <Stack gap="xs" mb="lg">
-          <Title order={2}>Partpoint Admin</Title>
+          <Title order={2}>Sakshay Connect Admin</Title>
           <Text c="dimmed" size="sm">
             {challenge ? 'Enter the 6-digit code from your authenticator app.' : 'Sign in to manage the platform.'}
           </Text>

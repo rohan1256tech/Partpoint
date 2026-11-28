@@ -92,7 +92,7 @@ export function AppLayout() {
         <Group h="100%" px="md" justify="space-between">
           <Group gap="sm">
             <Burger opened={opened} onClick={toggle} hiddenFrom="sm" size="sm" aria-label="Menu" />
-            <Text fw={700}>Partpoint Admin</Text>
+            <Text fw={700}>Sakshay Connect Admin</Text>
           </Group>
           <Group gap="xs">
             <Text size="sm" c="dimmed" visibleFrom="xs">

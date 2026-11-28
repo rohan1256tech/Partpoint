@@ -134,9 +134,9 @@ describe('invoices', () => {
 
     const svc = new InvoicesService(t.db);
     const fy = financialYear(new Date());
-    expect((await svc.load('admin', '', a)).invoiceNumber).toBe(`PP${fy}-000001`);
-    expect((await svc.load('admin', '', b)).invoiceNumber).toBe(`PP${fy}-000002`);
-    expect((await svc.load('admin', '', c)).invoiceNumber).toBe(`PP${fy}-000001`); // its own series
+    expect((await svc.load('admin', '', a)).invoiceNumber).toBe(`SC${fy}-000001`);
+    expect((await svc.load('admin', '', b)).invoiceNumber).toBe(`SC${fy}-000002`);
+    expect((await svc.load('admin', '', c)).invoiceNumber).toBe(`SC${fy}-000001`); // its own series
   });
 
   it('applies inter-state IGST and freezes the parties’ details', async () => {
@@ -170,7 +170,7 @@ describe('invoices', () => {
       const res = await http.get(url, token);
       expect(res.statusCode).toBe(200);
       expect(res.headers['content-type']).toBe('application/pdf');
-      expect(res.headers['content-disposition']).toMatch(/^inline; filename="invoice-PP\d{4}-000001\.pdf"$/);
+      expect(res.headers['content-disposition']).toMatch(/^inline; filename="invoice-SC\d{4}-000001\.pdf"$/);
       expect(res.rawPayload.subarray(0, 5).toString()).toBe('%PDF-');
       expect(res.rawPayload.subarray(-6).toString()).toContain('%%EOF');
     }

@@ -57,7 +57,7 @@ export function SupplierSection({ o, invalidate }: { o: OrderDetail; invalidate:
         />
       </Group>
       <Text size="sm" c="dimmed">
-        Deliver to {data.deliveryArea.city}, {data.deliveryArea.pincode}. The retailer only ever sees Partpoint.
+        Deliver to {data.deliveryArea.city}, {data.deliveryArea.pincode}. The retailer only ever sees Sakshay Connect.
       </Text>
 
       {mode === 'whole' ? (
