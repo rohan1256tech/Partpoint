@@ -132,10 +132,11 @@ fun LoginScreen(
     }
 
     ScreenColumn {
-        `in`.partpoint.core.ui.BrandHero {
+        `in`.partpoint.core.ui.BrandHero(photo = `in`.partpoint.core.ui.BrandPhotos.Repair) {
+            Spacer(Modifier.height(72.dp))
             `in`.partpoint.core.ui.BrandMark(size = 56.dp)
             Spacer(Modifier.height(14.dp))
-            Text(appTitle, style = MaterialTheme.typography.headlineMedium, color = androidx.compose.ui.graphics.Color.White, fontStyle = androidx.compose.ui.text.font.FontStyle.Italic)
+            Text(appTitle, style = MaterialTheme.typography.headlineMedium, color = androidx.compose.ui.graphics.Color.White)
             Text(`in`.partpoint.core.ui.Brand.TAGLINE, style = MaterialTheme.typography.titleSmall, color = `in`.partpoint.core.ui.BrandColors.Yellow)
             Spacer(Modifier.height(8.dp))
             Text(tagline, style = MaterialTheme.typography.bodyMedium, color = androidx.compose.ui.graphics.Color.White.copy(alpha = 0.8f))

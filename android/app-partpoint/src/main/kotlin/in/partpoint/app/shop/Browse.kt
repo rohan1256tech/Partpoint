@@ -89,6 +89,9 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import `in`.partpoint.core.network.ApiException
 import `in`.partpoint.core.network.apiCall
 import `in`.partpoint.core.ui.BrandColors
+import androidx.compose.foundation.layout.fillMaxHeight
+import `in`.partpoint.core.ui.BrandPhotos
+import `in`.partpoint.core.ui.hueFor
 import `in`.partpoint.core.ui.BrandGradient
 import `in`.partpoint.core.ui.ErrorState
 import `in`.partpoint.core.ui.LoadingScreen
@@ -234,15 +237,19 @@ private fun HomeHeader(onSearch: () -> Unit, city: String?, onAddresses: () -> U
         modifier.fillMaxWidth().background(BrandGradient, RoundedCornerShape(bottomStart = 28.dp, bottomEnd = 28.dp)),
     ) {
         Column(Modifier.statusBarsPadding().padding(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 20.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
-            Wordmark(onDark = true, markSize = 34.dp, textSize = 23.sp)
-            Surface(onClick = onAddresses, shape = RoundedCornerShape(14.dp), color = BrandColors.Yellow, modifier = Modifier.fillMaxWidth()) {
-                Row(Modifier.padding(horizontal = 14.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Outlined.LocationOn, contentDescription = null, tint = BrandColors.Ink, modifier = Modifier.size(20.dp))
-                    Column(Modifier.padding(start = 8.dp).weight(1f)) {
-                        Text("Delivering to", style = MaterialTheme.typography.labelSmall, color = BrandColors.Ink.copy(alpha = 0.7f))
-                        Text(city ?: "Add your shop address", style = MaterialTheme.typography.titleSmall, color = BrandColors.Ink, fontWeight = FontWeight.Bold)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Wordmark(onDark = true, markSize = 34.dp, textSize = 22.sp, modifier = Modifier.weight(1f))
+            }
+            Surface(onClick = onAddresses, shape = RoundedCornerShape(14.dp), color = Color.White.copy(alpha = 0.08f), modifier = Modifier.fillMaxWidth()) {
+                Row(Modifier.padding(horizontal = 12.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Box(Modifier.size(32.dp).background(BrandColors.Yellow, CircleShape), contentAlignment = Alignment.Center) {
+                        Icon(Icons.Outlined.LocationOn, contentDescription = null, tint = BrandColors.Ink, modifier = Modifier.size(18.dp))
                     }
-                    Icon(Icons.Outlined.KeyboardArrowDown, contentDescription = "Change address", tint = BrandColors.Ink)
+                    Column(Modifier.padding(start = 10.dp).weight(1f)) {
+                        Text("Delivering to", style = MaterialTheme.typography.labelSmall, color = Color.White.copy(alpha = 0.6f))
+                        Text(city ?: "Add your shop address", style = MaterialTheme.typography.titleSmall, color = Color.White, fontWeight = FontWeight.Bold)
+                    }
+                    Icon(Icons.Outlined.KeyboardArrowDown, contentDescription = "Change address", tint = Color.White.copy(alpha = 0.8f))
                 }
             }
             SearchBarButton(onSearch)
@@ -250,22 +257,28 @@ private fun HomeHeader(onSearch: () -> Unit, city: String?, onAddresses: () -> U
     }
 }
 
-/** The promise, when the admin has no banners running. */
+/** The promise over a photo of real parts, when the admin has no banners running. */
 @Composable
 private fun PromoCard(onShop: () -> Unit) {
     Surface(onClick = onShop, shape = RoundedCornerShape(22.dp), color = Color.Transparent, modifier = Modifier.fillMaxWidth().padding(top = 4.dp)) {
-        Box(Modifier.background(BrandGradient).padding(18.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Text("Mobile spare parts", style = MaterialTheme.typography.titleLarge, color = Color.White, fontWeight = FontWeight.ExtraBold)
-                    Text("at wholesale prices", style = MaterialTheme.typography.titleMedium, color = BrandColors.Yellow, fontStyle = androidx.compose.ui.text.font.FontStyle.Italic, fontWeight = FontWeight.Bold)
-                    Text("Tested parts · GST invoice · delivered to your shop", style = MaterialTheme.typography.bodySmall, color = Color.White.copy(alpha = 0.8f))
-                    Surface(shape = RoundedCornerShape(10.dp), color = BrandColors.Yellow, modifier = Modifier.padding(top = 6.dp)) {
-                        Text("Shop now", color = BrandColors.Ink, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 14.dp, vertical = 7.dp))
-                    }
-                }
-                Box(Modifier.size(88.dp).background(BrandColors.Yellow.copy(alpha = 0.16f), CircleShape), contentAlignment = Alignment.Center) {
-                    Icon(Icons.Outlined.DeliveryDining, contentDescription = null, tint = BrandColors.Yellow, modifier = Modifier.size(56.dp))
+        Box(Modifier.height(188.dp)) {
+            androidx.compose.foundation.Image(
+                androidx.compose.ui.res.painterResource(BrandPhotos.Parts),
+                contentDescription = null,
+                contentScale = androidx.compose.ui.layout.ContentScale.Crop,
+                modifier = Modifier.matchParentSize(),
+            )
+            Box(
+                Modifier.matchParentSize().background(
+                    androidx.compose.ui.graphics.Brush.horizontalGradient(listOf(Color.Black.copy(alpha = 0.95f), Color.Black.copy(alpha = 0.82f), Color.Black.copy(alpha = 0.25f))),
+                ),
+            )
+            Column(Modifier.padding(18.dp).fillMaxHeight(), verticalArrangement = Arrangement.Center) {
+                Text("WHOLESALE PRICES", style = MaterialTheme.typography.labelSmall, color = BrandColors.Yellow, letterSpacing = 1.5.sp, fontWeight = FontWeight.Bold)
+                Text("Mobile spare parts\nfor your repair shop", style = MaterialTheme.typography.titleLarge, color = Color.White, fontWeight = FontWeight.ExtraBold, modifier = Modifier.padding(top = 6.dp))
+                Text("Tested parts · GST invoice · fast delivery", style = MaterialTheme.typography.bodySmall, color = Color.White.copy(alpha = 0.8f), modifier = Modifier.padding(top = 6.dp))
+                Surface(shape = RoundedCornerShape(10.dp), color = BrandColors.Yellow, modifier = Modifier.padding(top = 12.dp)) {
+                    Text("Shop now", color = BrandColors.Ink, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 14.dp, vertical = 7.dp))
                 }
             }
         }
@@ -276,19 +289,28 @@ private fun PromoCard(onShop: () -> Unit) {
 @Composable
 private fun QuickActions(onShop: () -> Unit, onOrders: () -> Unit) {
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-        QuickTile(Icons.Outlined.Smartphone, "Spare parts\nshop", BrandColors.Yellow, BrandColors.Ink, Modifier.weight(1f), onShop)
-        val dark = MaterialTheme.colorScheme.surface.luminance() < 0.5f
-        QuickTile(Icons.Outlined.ReceiptLong, "My\norders", if (dark) Color(0xFF34353D) else BrandColors.Ink, BrandColors.Yellow, Modifier.weight(1f), onOrders)
-        QuickTile(Icons.Outlined.LocalShipping, "Track\ndelivery", BrandColors.Green, Color.White, Modifier.weight(1f), onOrders)
+        QuickTile(Icons.Outlined.Smartphone, "Shop parts", "All categories", Modifier.weight(1f), onShop)
+        QuickTile(Icons.Outlined.ReceiptLong, "My orders", "Invoices", Modifier.weight(1f), onOrders)
+        QuickTile(Icons.Outlined.LocalShipping, "Track", "Live status", Modifier.weight(1f), onOrders)
     }
 }
 
 @Composable
-private fun QuickTile(icon: ImageVector, label: String, bg: Color, ink: Color, modifier: Modifier, onClick: () -> Unit) {
-    Surface(onClick = onClick, shape = RoundedCornerShape(18.dp), color = bg, modifier = modifier.height(96.dp)) {
-        Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.SpaceBetween) {
-            Icon(icon, contentDescription = null, tint = ink, modifier = Modifier.size(28.dp))
-            Text(label, color = ink, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold, lineHeight = 16.sp)
+private fun QuickTile(icon: ImageVector, label: String, hint: String, modifier: Modifier, onClick: () -> Unit) {
+    val (tint, ink) = hueFor(label)
+    Surface(
+        onClick = onClick,
+        shape = RoundedCornerShape(18.dp),
+        color = MaterialTheme.colorScheme.surfaceContainerLow,
+        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+        modifier = modifier,
+    ) {
+        Column(Modifier.padding(12.dp)) {
+            Box(Modifier.size(40.dp).background(tint, RoundedCornerShape(12.dp)), contentAlignment = Alignment.Center) {
+                Icon(icon, contentDescription = null, tint = ink, modifier = Modifier.size(22.dp))
+            }
+            Text(label, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 10.dp))
+            Text(hint, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
     }
 }
@@ -303,7 +325,7 @@ private fun SearchBarButton(onClick: () -> Unit) {
         modifier = Modifier.fillMaxWidth().height(52.dp),
     ) {
         Row(Modifier.padding(horizontal = 16.dp), verticalAlignment = Alignment.CenterVertically) {
-            Icon(Icons.Outlined.Search, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+            Icon(Icons.Outlined.Search, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
             Spacer(Modifier.width(12.dp))
             Text(SEARCH_HINT, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
@@ -339,11 +361,18 @@ private fun BannerCarousel(banners: List<Banner>, modifier: Modifier = Modifier,
 
 @Composable
 private fun CategoryTile(c: Category, onClick: () -> Unit) {
+    val (tint, ink) = hueFor(c.name)
     Column(
         Modifier.width(84.dp).clickable(role = Role.Button, onClick = onClick),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        RemoteImage(c.imageUrl, Modifier.size(72.dp), corner = 22.dp, fallback = partIcon(c.name))
+        if (c.imageUrl != null) {
+            RemoteImage(c.imageUrl, Modifier.size(72.dp), corner = 22.dp, fallback = partIcon(c.name))
+        } else {
+            Box(Modifier.size(72.dp).background(tint, RoundedCornerShape(22.dp)), contentAlignment = Alignment.Center) {
+                Icon(partIcon(c.name), contentDescription = null, tint = ink, modifier = Modifier.size(32.dp))
+            }
+        }
         Text(
             c.name,
             style = MaterialTheme.typography.labelMedium,
@@ -362,8 +391,8 @@ private fun BrandChip(b: Brand, onClick: () -> Unit) {
             if (b.logoUrl != null) {
                 RemoteImage(b.logoUrl, Modifier.size(28.dp), corner = 8.dp, contentScale = androidx.compose.ui.layout.ContentScale.Fit)
             } else {
-                Box(Modifier.size(28.dp).background(MaterialTheme.colorScheme.primaryContainer, RoundedCornerShape(8.dp)), contentAlignment = Alignment.Center) {
-                    Text(b.name.take(1), color = MaterialTheme.colorScheme.onPrimaryContainer, fontWeight = FontWeight.Bold)
+                Box(Modifier.size(28.dp).background(hueFor(b.name).first, RoundedCornerShape(8.dp)), contentAlignment = Alignment.Center) {
+                    Text(b.name.take(1), color = hueFor(b.name).second, fontWeight = FontWeight.Bold)
                 }
             }
             Text(b.name, style = MaterialTheme.typography.labelLarge, modifier = Modifier.padding(start = 8.dp))
@@ -469,8 +498,8 @@ fun ProductCard(p: ProductSummary, modifier: Modifier = Modifier, onClick: () ->
                     Text("Out of stock", color = Color.White, style = MaterialTheme.typography.labelSmall, modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp))
                 }
             } else if (off != null && off >= 5) {
-                Surface(color = BrandColors.Amber, shape = RoundedCornerShape(10.dp), modifier = Modifier.padding(12.dp)) {
-                    Text("$off% off", color = BrandColors.Ink, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp))
+                Surface(color = BrandColors.Green, shape = RoundedCornerShape(8.dp), modifier = Modifier.padding(12.dp)) {
+                    Text("$off% OFF", color = Color.White, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp))
                 }
             }
         }
@@ -478,7 +507,7 @@ fun ProductCard(p: ProductSummary, modifier: Modifier = Modifier, onClick: () ->
             Text(
                 listOfNotNull(p.brandName, p.categoryName).joinToString(" · ").ifEmpty { " " },
                 style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.primary,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )

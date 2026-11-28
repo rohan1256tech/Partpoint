@@ -59,11 +59,11 @@ fun RemoteImage(
     val placeholder: @Composable () -> Unit = {
         BoxWithConstraints(
             Modifier.fillMaxSize().background(
-                Brush.linearGradient(listOf(scheme.primaryContainer.copy(alpha = 0.55f), scheme.secondaryContainer.copy(alpha = 0.45f))),
+                Brush.linearGradient(listOf(scheme.surfaceContainerHigh, scheme.surfaceContainer)),
             ),
             contentAlignment = Alignment.Center,
         ) {
-            Icon(fallback, contentDescription = null, tint = scheme.primary.copy(alpha = 0.55f), modifier = Modifier.size(minOf(maxWidth, maxHeight) * 0.42f))
+            Icon(fallback, contentDescription = null, tint = scheme.onSurfaceVariant.copy(alpha = 0.55f), modifier = Modifier.size(minOf(maxWidth, maxHeight) * 0.42f))
         }
     }
     Box(modifier.clip(shape)) {

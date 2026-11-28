@@ -1,6 +1,7 @@
 package `in`.partpoint.core.ui
 
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -12,7 +13,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.BatteryChargingFull
@@ -38,23 +38,29 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
-import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import kotlin.math.cos
+import kotlin.math.sin
 
 /** The business's public name and promise, shown in both apps. */
 object Brand {
@@ -63,40 +69,50 @@ object Brand {
     const val TAGLINE = "Parts. Price. Fast Delivery."
 }
 
+/** Bundled, licence-free photos (Pexels, see core/ui/PHOTO_CREDITS.md). */
+object BrandPhotos {
+    val Repair = R.drawable.img_hero_repair
+    val Parts = R.drawable.img_hero_parts
+}
+
 /**
- * The Sakshay Connect mark: a yellow swoosh "S" sweeping under a phone outline on a black tile,
- * after the client's logo. Drawn in code so it is crisp at every size; the launcher icon uses
- * the same shapes.
+ * The Sakshay Connect mark: an "S" drawn as one circuit trace joining two nodes (parts that
+ * connect), in signal yellow on a black tile. Drawn in code so it is crisp at every size; the
+ * launcher icon uses the same geometry.
  */
 @Composable
-fun BrandMark(modifier: Modifier = Modifier, size: Dp = 40.dp) {
+fun BrandMark(
+    modifier: Modifier = Modifier,
+    size: Dp = 40.dp,
+    tile: Color = BrandColors.Ink,
+    trace: Color = BrandColors.Yellow,
+    node: Color = Color.White,
+) {
     Canvas(modifier.size(size).semantics { contentDescription = Brand.NAME }) {
         val s = this.size.minDimension
-        drawRoundRect(BrandColors.Ink, cornerRadius = CornerRadius(s * 0.26f))
-        // Phone outline, top right.
-        drawRoundRect(
-            Color.White,
-            topLeft = Offset(s * 0.50f, s * 0.15f),
-            size = Size(s * 0.28f, s * 0.44f),
-            cornerRadius = CornerRadius(s * 0.06f),
-            style = Stroke(width = s * 0.055f),
-        )
-        // The swoosh S: two strokes that lean like the client's mark.
-        val path = androidx.compose.ui.graphics.Path().apply {
-            moveTo(s * 0.62f, s * 0.30f)
-            cubicTo(s * 0.46f, s * 0.20f, s * 0.20f, s * 0.26f, s * 0.24f, s * 0.42f)
-            cubicTo(s * 0.28f, s * 0.56f, s * 0.70f, s * 0.50f, s * 0.70f, s * 0.66f)
-            cubicTo(s * 0.70f, s * 0.82f, s * 0.38f, s * 0.86f, s * 0.20f, s * 0.74f)
+        drawRoundRect(tile, cornerRadius = CornerRadius(s * 0.27f))
+        val r = s * 0.145f
+        val cx = s * 0.5f
+        val topY = s * 0.355f
+        val bottomY = s * 0.645f
+        val path = Path().apply {
+            // Upper bowl: from the upper right, round the top and left, down to the centre.
+            arcTo(Rect(cx - r, topY - r, cx + r, topY + r), -30f, -240f, true)
+            // Lower bowl: from the centre, round the right and bottom, to the lower left.
+            arcTo(Rect(cx - r, bottomY - r, cx + r, bottomY + r), -90f, 240f, false)
         }
-        drawPath(path, BrandColors.Yellow, style = Stroke(width = s * 0.12f, cap = StrokeCap.Round))
-        // Speed line.
-        drawLine(BrandColors.Yellow, Offset(s * 0.16f, s * 0.86f), Offset(s * 0.46f, s * 0.86f), strokeWidth = s * 0.04f, cap = StrokeCap.Round)
+        drawPath(path, trace, style = Stroke(width = s * 0.11f, cap = StrokeCap.Round))
+        val a = Math.toRadians(30.0)
+        val start = Offset(cx + r * cos(a).toFloat(), topY - r * sin(a).toFloat())
+        val end = Offset(cx - r * cos(a).toFloat(), bottomY + r * sin(a).toFloat())
+        drawCircle(node, radius = s * 0.068f, center = start)
+        drawCircle(node, radius = s * 0.068f, center = end)
     }
 }
 
 /**
- * Logo and name. On dark backgrounds "Connect" is yellow; on light ones it sits on a yellow
- * highlight so it stays readable. [suffix] adds a word, e.g. "Delivery" for the rider app.
+ * Logo and name: "Sakshay" heavy, "Connect" lighter, in the text colour of the background.
+ * [suffix] adds a word, e.g. "Delivery" for the rider app.
  */
 @Composable
 fun Wordmark(
@@ -112,39 +128,42 @@ fun Wordmark(
         if (showMark) BrandMark(size = markSize)
         Text(
             buildAnnotatedString {
-                withStyle(SpanStyle(color = ink)) { append("Sakshay ") }
-                withStyle(if (onDark) SpanStyle(color = BrandColors.Yellow) else SpanStyle(color = BrandColors.Ink, background = BrandColors.Yellow)) { append("Connect") }
-                if (suffix != null) withStyle(SpanStyle(color = ink.copy(alpha = 0.7f), fontWeight = FontWeight.SemiBold)) { append(" $suffix") }
+                withStyle(SpanStyle(color = ink, fontWeight = FontWeight.Black)) { append("Sakshay") }
+                withStyle(SpanStyle(color = ink.copy(alpha = 0.78f), fontWeight = FontWeight.Medium)) { append(" Connect") }
+                if (suffix != null) {
+                    withStyle(SpanStyle(color = if (onDark) BrandColors.Yellow else ink.copy(alpha = 0.55f), fontWeight = FontWeight.SemiBold)) { append(" $suffix") }
+                }
             },
-            fontWeight = FontWeight.ExtraBold,
-            fontStyle = FontStyle.Italic,
             fontSize = textSize,
-            letterSpacing = (-0.3).sp,
+            letterSpacing = (-0.4).sp,
             maxLines = 1,
         )
     }
 }
 
-/** First screen while the app restores the session: the brand on black, as in the client's artwork. */
+/** First screen while the app restores the session: the mark and name on black. */
 @Composable
 fun BrandSplash(subtitle: String = Brand.TAGLINE) {
     Box(Modifier.fillMaxSize().background(BrandGradient), contentAlignment = Alignment.Center) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             BrandMark(size = 96.dp)
-            Spacer(Modifier.height(20.dp))
-            Wordmark(textSize = 32.sp, onDark = true, showMark = false)
-            Text(subtitle, color = Color.White.copy(alpha = 0.85f), style = MaterialTheme.typography.titleMedium, fontStyle = FontStyle.Italic, modifier = Modifier.padding(top = 6.dp))
-            Box(Modifier.padding(top = 10.dp).width(120.dp).height(3.dp).clip(RoundedCornerShape(2.dp)).background(BrandColors.Yellow))
+            Spacer(Modifier.height(22.dp))
+            Wordmark(textSize = 30.sp, onDark = true, showMark = false)
+            Text(subtitle, color = Color.White.copy(alpha = 0.7f), style = MaterialTheme.typography.titleSmall, letterSpacing = 1.sp, modifier = Modifier.padding(top = 8.dp))
             Spacer(Modifier.height(48.dp))
             CircularProgressIndicator(color = BrandColors.Yellow, strokeWidth = 2.5.dp, modifier = Modifier.size(28.dp))
         }
     }
 }
 
-/** The dark brand panel used as a hero: sign-in, approval wait, home header. */
+/** A dark brand panel, optionally over a photo with a gradient so the text stays readable. */
 @Composable
-fun BrandHero(modifier: Modifier = Modifier, content: @Composable () -> Unit) {
+fun BrandHero(modifier: Modifier = Modifier, photo: Int? = null, content: @Composable () -> Unit) {
     Box(modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp)).background(BrandGradient)) {
+        if (photo != null) {
+            Image(painterResource(photo), contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.matchParentSize())
+            Box(Modifier.matchParentSize().background(Brush.verticalGradient(listOf(Color.Black.copy(alpha = 0.3f), Color.Black.copy(alpha = 0.88f)))))
+        }
         Column(Modifier.padding(20.dp)) { content() }
     }
 }
@@ -173,12 +192,20 @@ fun partIcon(vararg hints: String?): ImageVector {
     }
 }
 
+/** A stable soft hue for [key] (a category or an action), as (tile colour, icon colour). */
+@Composable
+fun hueFor(key: String): Pair<Color, Color> {
+    val (tint, icon) = CategoryHues[(key.hashCode() and 0x7fffffff) % CategoryHues.size]
+    val dark = MaterialTheme.colorScheme.surface.luminance() < 0.5f
+    return if (dark) icon.copy(alpha = 0.22f) to lerp(icon, Color.White, 0.5f) else tint to icon
+}
+
 /** A section heading with an optional "See all" style action. */
 @Composable
 fun SectionHeader(title: String, modifier: Modifier = Modifier, action: Pair<String, () -> Unit>? = null) {
     Row(modifier.fillMaxWidth().padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
         Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
-        if (action != null) TextButton(onClick = action.second) { Text(action.first) }
+        if (action != null) TextButton(onClick = action.second) { Text(action.first, color = MaterialTheme.colorScheme.onSurface) }
     }
 }
 
